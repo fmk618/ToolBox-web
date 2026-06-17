@@ -1,65 +1,148 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { ArrowRight, ListChecks, PlayCircle } from "lucide-react";
+import { fetchRoutes, reachableFormats, type Routes } from "../lib/api";
+import { useJobs } from "../lib/jobs";
+import { StepSection } from "../components/convert/section";
+import { FormatGrid } from "../components/convert/format-card";
+import { DropArea } from "../components/convert/drop-area";
+import { FileList, type StagedFile } from "../components/convert/file-list";
+import { ConversionBadge } from "../components/convert/conversion-badge";
+
+export default function ConvertPage() {
+  const [routes, setRoutes] = useState<Routes>({});
+  const [routesErr, setRoutesErr] = useState<string | null>(null);
+  const [src, setSrc] = useState<string | null>(null);
+  const [dst, setDst] = useState<string | null>(null);
+  const [staged, setStaged] = useState<StagedFile[]>([]);
+  const { enqueue, activeCount } = useJobs();
+
+  useEffect(() => {
+    fetchRoutes()
+      .then(setRoutes)
+      .catch((e) =>
+        setRoutesErr(
+          `无法加载转换路由 — ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
+  }, []);
+
+  const sourceFormats = useMemo(() => Object.keys(routes), [routes]);
+  const targetFormats = useMemo(
+    () => (src ? reachableFormats(routes, src) : []),
+    [routes, src],
+  );
+
+  function selectSrc(fmt: string) {
+    setSrc(fmt);
+    setDst(null);
+    setStaged([]);
+  }
+
+  function addFiles(files: File[]) {
+    setStaged((cur) => [
+      ...cur,
+      ...files.map((f) => ({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        file: f,
+      })),
+    ]);
+  }
+
+  function removeFile(id: string) {
+    setStaged((cur) => cur.filter((s) => s.id !== id));
+  }
+
+  function submitAll() {
+    if (!src || !dst || !staged.length) return;
+    staged.forEach((s) => enqueue({ file: s.file, srcFmt: src, dstFmt: dst }));
+    setStaged([]);
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="mx-auto max-w-5xl space-y-4 sm:space-y-5">
+      {routesErr && (
+        <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+          {routesErr}。请确认后端 <code>uv run toolbox serve</code> 已启动。
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      )}
+
+      <StepSection step={1} title="选择源格式" hint="选择你要转换的文件原始格式">
+        {sourceFormats.length === 0 ? (
+          <div className="rounded-lg bg-slate-50 px-3 py-4 text-center text-sm text-slate-500 dark:bg-slate-900">
+            {routesErr ? "无法获取路由" : "正在加载可用格式…"}
+          </div>
+        ) : (
+          <FormatGrid
+            formats={sourceFormats}
+            selected={src}
+            onSelect={selectSrc}
+          />
+        )}
+      </StepSection>
+
+      {src && (
+        <StepSection
+          step={2}
+          title="选择目标格式"
+          hint={`${src.toUpperCase()} 可达 ${targetFormats.length} 种格式（含多步转换）`}
+        >
+          {targetFormats.length === 0 ? (
+            <div className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              当前没有任何引擎能处理 {src.toUpperCase()} 格式
+            </div>
+          ) : (
+            <FormatGrid
+              formats={targetFormats}
+              selected={dst}
+              onSelect={setDst}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+          )}
+        </StepSection>
+      )}
+
+      {src && dst && (
+        <StepSection
+          step={3}
+          title="上传文件"
+          hint="拖入或选择文件后，点击「添加到队列」开始转换"
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <ConversionBadge src={src} dst={dst} />
+            <span className="text-xs text-slate-400">
+              已选择 {staged.length} 个文件
+            </span>
+          </div>
+
+          <DropArea acceptFmt={src} onFiles={addFiles} />
+          <FileList files={staged} onRemove={removeFile} />
+
+          <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
+            <span className="text-xs text-slate-500">
+              {activeCount > 0 && (
+                <Link
+                  href="/queue"
+                  className="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  <ListChecks className="h-3.5 w-3.5" />
+                  队列中还有 {activeCount} 个进行中
+                </Link>
+              )}
+            </span>
+            <button
+              onClick={submitAll}
+              disabled={staged.length === 0}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 sm:w-auto dark:disabled:bg-slate-700"
+            >
+              <PlayCircle className="h-4 w-4" />
+              添加到队列 ({staged.length})
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </StepSection>
+      )}
     </div>
   );
 }
