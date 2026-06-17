@@ -17,6 +17,11 @@ import { meta as password } from "../../tools/password/meta";
 import { meta as jwtDecode } from "../../tools/jwt-decode/meta";
 import { meta as timezone } from "../../tools/timezone/meta";
 import { meta as colorContrast } from "../../tools/color-contrast/meta";
+import { meta as qrcode } from "../../tools/qrcode/meta";
+import { meta as yamlJson } from "../../tools/yaml-json/meta";
+import { meta as markdownPreview } from "../../tools/markdown-preview/meta";
+import { meta as textDiff } from "../../tools/text-diff/meta";
+import { meta as cronParse } from "../../tools/cron-parse/meta";
 
 type LazyUi = () => Promise<{ default: ComponentType }>;
 
@@ -36,6 +41,11 @@ const UI_LOADERS: Record<string, LazyUi> = {
   "jwt-decode": () => import("../../tools/jwt-decode/ui"),
   timezone: () => import("../../tools/timezone/ui"),
   "color-contrast": () => import("../../tools/color-contrast/ui"),
+  qrcode: () => import("../../tools/qrcode/ui"),
+  "yaml-json": () => import("../../tools/yaml-json/ui"),
+  "markdown-preview": () => import("../../tools/markdown-preview/ui"),
+  "text-diff": () => import("../../tools/text-diff/ui"),
+  "cron-parse": () => import("../../tools/cron-parse/ui"),
 };
 
 const METAS = [
@@ -44,13 +54,18 @@ const METAS = [
   urlCodec,
   htmlEntity,
   jsonFormat,
+  yamlJson,
+  markdownPreview,
+  textDiff,
   regexTest,
   hash,
   password,
   jwtDecode,
   uuid,
+  qrcode,
   timestamp,
   timezone,
+  cronParse,
   color,
   colorContrast,
   systemSettings,
