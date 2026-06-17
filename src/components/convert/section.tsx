@@ -8,7 +8,7 @@ export function StepSection({
 }: {
   step: number;
   title: string;
-  hint?: string;
+  hint?: ReactNode;
   children: ReactNode;
 }) {
   return (
