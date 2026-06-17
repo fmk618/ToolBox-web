@@ -3,8 +3,8 @@ import { Shell } from "../components/shell/shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Toolbox — 通用文件格式转换",
-  description: "PDF · Word · Markdown · HTML 一键互转 — 企业级中后台",
+  title: "Toolbox — 开发者工具集",
+  description: "常用开发者小工具集合，全部本地运行",
 };
 
 export default function RootLayout({

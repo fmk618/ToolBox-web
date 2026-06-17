@@ -10,6 +10,7 @@ import { meta as uuid } from "../../tools/uuid/meta";
 import { meta as timestamp } from "../../tools/timestamp/meta";
 import { meta as color } from "../../tools/color/meta";
 import { meta as fileConvert } from "../../tools/file-convert/meta";
+import { meta as systemSettings } from "../../tools/system-settings/meta";
 
 type LazyUi = () => Promise<{ default: ComponentType }>;
 
@@ -22,9 +23,11 @@ const UI_LOADERS: Record<string, LazyUi> = {
   timestamp: () => import("../../tools/timestamp/ui"),
   color: () => import("../../tools/color/ui"),
   "file-convert": () => import("../../tools/file-convert/ui"),
+  settings: () => import("../../tools/system-settings/ui"),
 };
 
 const METAS = [
+  fileConvert,
   base64,
   urlCodec,
   jsonFormat,
@@ -32,7 +35,7 @@ const METAS = [
   uuid,
   timestamp,
   color,
-  fileConvert,
+  systemSettings,
 ];
 
 export const TOOLS: Tool[] = METAS.map((m) => ({

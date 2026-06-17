@@ -79,14 +79,16 @@ export async function testLLMSettings(
   return res.json();
 }
 
+const FILE_CONVERT = `${API_BASE}/tools/file-convert`;
+
 export async function fetchRoutes(): Promise<Routes> {
-  const res = await fetch(`${API_BASE}/routes`, { cache: "no-store" });
+  const res = await fetch(`${FILE_CONVERT}/routes`, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
 export async function fetchEngines(): Promise<EngineInfo[]> {
-  const res = await fetch(`${API_BASE}/engines`, { cache: "no-store" });
+  const res = await fetch(`${FILE_CONVERT}/engines`, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -127,7 +129,10 @@ export function convertFile(
 ): Promise<{ blob: Blob; filename: string }> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${API_BASE}/convert?to=${encodeURIComponent(to)}`);
+    xhr.open(
+      "POST",
+      `${FILE_CONVERT}/convert?to=${encodeURIComponent(to)}`,
+    );
     xhr.responseType = "blob";
 
     xhr.upload.onprogress = (e) => {

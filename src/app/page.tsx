@@ -1,148 +1,68 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ListChecks, PlayCircle } from "lucide-react";
-import { fetchRoutes, reachableFormats, type Routes } from "../lib/api";
-import { useJobs } from "../lib/jobs";
-import { StepSection } from "../components/convert/section";
-import { FormatGrid } from "../components/convert/format-card";
-import { DropArea } from "../components/convert/drop-area";
-import { FileList, type StagedFile } from "../components/convert/file-list";
-import { ConversionBadge } from "../components/convert/conversion-badge";
+import { CATEGORIES, categoryById } from "../lib/tools/categories";
+import { TOOLS } from "../lib/tools/manifest";
 
-export default function ConvertPage() {
-  const [routes, setRoutes] = useState<Routes>({});
-  const [routesErr, setRoutesErr] = useState<string | null>(null);
-  const [src, setSrc] = useState<string | null>(null);
-  const [dst, setDst] = useState<string | null>(null);
-  const [staged, setStaged] = useState<StagedFile[]>([]);
-  const { enqueue, activeCount } = useJobs();
-
-  useEffect(() => {
-    fetchRoutes()
-      .then(setRoutes)
-      .catch((e) =>
-        setRoutesErr(
-          `无法加载转换路由 — ${e instanceof Error ? e.message : String(e)}`,
-        ),
-      );
-  }, []);
-
-  const sourceFormats = useMemo(() => Object.keys(routes), [routes]);
-  const targetFormats = useMemo(
-    () => (src ? reachableFormats(routes, src) : []),
-    [routes, src],
-  );
-
-  function selectSrc(fmt: string) {
-    setSrc(fmt);
-    setDst(null);
-    setStaged([]);
-  }
-
-  function addFiles(files: File[]) {
-    setStaged((cur) => [
-      ...cur,
-      ...files.map((f) => ({
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        file: f,
-      })),
-    ]);
-  }
-
-  function removeFile(id: string) {
-    setStaged((cur) => cur.filter((s) => s.id !== id));
-  }
-
-  function submitAll() {
-    if (!src || !dst || !staged.length) return;
-    staged.forEach((s) => enqueue({ file: s.file, srcFmt: src, dstFmt: dst }));
-    setStaged([]);
+export default function HomePage() {
+  const grouped = new Map<string, typeof TOOLS>();
+  for (const t of TOOLS) {
+    if (!grouped.has(t.category)) grouped.set(t.category, []);
+    grouped.get(t.category)!.push(t);
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 sm:space-y-5">
-      {routesErr && (
-        <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-          {routesErr}。请确认后端 <code>uv run toolbox serve</code> 已启动。
-        </div>
-      )}
+    <div className="mx-auto max-w-5xl">
+      <header className="mb-8">
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">
+          Toolbox
+        </h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          常用开发者小工具集合，全部本地运行，无需登录
+        </p>
+      </header>
 
-      <StepSection step={1} title="选择源格式" hint="选择你要转换的文件原始格式">
-        {sourceFormats.length === 0 ? (
-          <div className="rounded-lg bg-slate-50 px-3 py-4 text-center text-sm text-slate-500 dark:bg-slate-900">
-            {routesErr ? "无法获取路由" : "正在加载可用格式…"}
-          </div>
-        ) : (
-          <FormatGrid
-            formats={sourceFormats}
-            selected={src}
-            onSelect={selectSrc}
-          />
-        )}
-      </StepSection>
-
-      {src && (
-        <StepSection
-          step={2}
-          title="选择目标格式"
-          hint={`${src.toUpperCase()} 可达 ${targetFormats.length} 种格式（含多步转换）`}
-        >
-          {targetFormats.length === 0 ? (
-            <div className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-              当前没有任何引擎能处理 {src.toUpperCase()} 格式
+      {CATEGORIES.filter((c) => grouped.has(c.id)).map((cat) => {
+        const Icon = cat.icon;
+        const tools = grouped.get(cat.id) ?? [];
+        return (
+          <section key={cat.id} className="mb-8">
+            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <Icon className="h-3.5 w-3.5" />
+              <span>{cat.label}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-400">{tools.length}</span>
             </div>
-          ) : (
-            <FormatGrid
-              formats={targetFormats}
-              selected={dst}
-              onSelect={setDst}
-            />
-          )}
-        </StepSection>
-      )}
-
-      {src && dst && (
-        <StepSection
-          step={3}
-          title="上传文件"
-          hint="拖入或选择文件后，点击「添加到队列」开始转换"
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <ConversionBadge src={src} dst={dst} />
-            <span className="text-xs text-slate-400">
-              已选择 {staged.length} 个文件
-            </span>
-          </div>
-
-          <DropArea acceptFmt={src} onFiles={addFiles} />
-          <FileList files={staged} onRemove={removeFile} />
-
-          <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
-            <span className="text-xs text-slate-500">
-              {activeCount > 0 && (
-                <Link
-                  href="/queue"
-                  className="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  <ListChecks className="h-3.5 w-3.5" />
-                  队列中还有 {activeCount} 个进行中
-                </Link>
-              )}
-            </span>
-            <button
-              onClick={submitAll}
-              disabled={staged.length === 0}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 sm:w-auto dark:disabled:bg-slate-700"
-            >
-              <PlayCircle className="h-4 w-4" />
-              添加到队列 ({staged.length})
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </StepSection>
-      )}
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {tools.map((t) => {
+                const TIcon = t.icon;
+                return (
+                  <Link
+                    key={t.slug}
+                    href={`/tools/${t.slug}`}
+                    className="group flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 transition hover:border-blue-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:hover:border-blue-700"
+                  >
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600 transition group-hover:bg-blue-50 group-hover:text-blue-600 dark:bg-slate-800 dark:text-slate-300 dark:group-hover:bg-blue-950 dark:group-hover:text-blue-300">
+                      <TIcon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                        {t.name}
+                      </div>
+                      <div className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                        {t.description}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
+
+// Suppress unused-warning helper kept for future use.
+void categoryById;

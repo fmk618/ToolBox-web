@@ -22,13 +22,15 @@ import {
   type ProviderSpec,
 } from "../../lib/api";
 import { clearHistory } from "../../lib/history";
+import { ToolShell } from "../../components/tools/tool-shell";
+import { meta } from "./meta";
 
 const STORAGE_KEY = "toolbox.apiBase";
 const DEFAULT_BASE = "http://127.0.0.1:8000";
 
 type TestState = "idle" | "loading" | "ok" | "fail";
 
-export default function SettingsPage() {
+export default function SystemSettingsUi() {
   const [apiBase, setApiBase] = useState("");
   const [saved, setSaved] = useState(false);
   const [testing, setTesting] = useState<TestState>("idle");
@@ -52,79 +54,73 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 sm:space-y-5">
-      <LLMSection />
+    <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
+      <div className="space-y-4">
+        <LLMSection />
 
-      <Section title="后端连接" desc="配置 Toolbox HTTP API 地址">
-        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
-          API Base URL
-        </label>
-        <div className="mt-1 flex flex-col gap-2 sm:flex-row">
-          <input
-            value={apiBase}
-            onChange={(e) => setApiBase(e.target.value)}
-            placeholder={DEFAULT_BASE}
-            className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-900"
-          />
-          <button
-            onClick={testConnection}
-            disabled={testing === "loading"}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            {testing === "loading" && (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            )}
-            {testing === "ok" && (
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-            )}
-            {testing === "fail" && <CircleX className="h-4 w-4 text-red-500" />}
-            测试连接
-          </button>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button
-            onClick={save}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
-          >
-            <Save className="h-4 w-4" />
-            保存并刷新
-          </button>
-          <button
-            onClick={() => setApiBase(DEFAULT_BASE)}
-            className="text-xs text-slate-500 hover:text-slate-700 hover:underline dark:hover:text-slate-300"
-          >
-            恢复默认
-          </button>
-          {saved && <span className="text-xs text-green-600">✓ 已保存</span>}
-        </div>
-      </Section>
+        <Section title="后端连接" desc="配置 Toolbox HTTP API 地址">
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
+            API Base URL
+          </label>
+          <div className="mt-1 flex flex-col gap-2 sm:flex-row">
+            <input
+              value={apiBase}
+              onChange={(e) => setApiBase(e.target.value)}
+              placeholder={DEFAULT_BASE}
+              className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
+            <button
+              onClick={testConnection}
+              disabled={testing === "loading"}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              {testing === "loading" && <Loader2 className="h-4 w-4 animate-spin" />}
+              {testing === "ok" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+              {testing === "fail" && <CircleX className="h-4 w-4 text-red-500" />}
+              测试连接
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              onClick={save}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <Save className="h-4 w-4" />
+              保存并刷新
+            </button>
+            <button
+              onClick={() => setApiBase(DEFAULT_BASE)}
+              className="text-xs text-slate-500 hover:underline"
+            >
+              恢复默认
+            </button>
+            {saved && <span className="text-xs text-green-600">✓ 已保存</span>}
+          </div>
+        </Section>
 
-      <Section title="本地数据" desc="清理浏览器中保存的历史记录">
-        <button
-          onClick={() => {
-            if (confirm("确认清空全部转换历史？")) clearHistory();
-          }}
-          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 transition hover:bg-red-100 dark:border-red-900 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900"
-        >
-          清空转换历史
-        </button>
-      </Section>
+        <Section title="本地数据" desc="清理浏览器中保存的历史记录">
+          <button
+            onClick={() => {
+              if (confirm("确认清空全部转换历史？")) clearHistory();
+            }}
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+          >
+            清空转换历史
+          </button>
+        </Section>
 
-      <Section title="关于" desc="Toolbox v0.1.0">
-        <ul className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
-          <li>· 后端核心：Python + FastAPI + Typer</li>
-          <li>· 引擎层：Vision-LLM · Docling · MarkItDown · Pandoc · LibreOffice</li>
-          <li>· 路由：BFS 自动找最短转换路径</li>
-          <li>· License：MIT（项目本体）</li>
-        </ul>
-      </Section>
-    </div>
+        <Section title="关于" desc="Toolbox v0.1.0">
+          <ul className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
+            <li>· 后端核心：Python + FastAPI + Typer</li>
+            <li>· 引擎层：Vision-LLM · Docling · MarkItDown · Pandoc · LibreOffice</li>
+            <li>· 路由：BFS 自动找最短转换路径</li>
+            <li>· License：MIT</li>
+          </ul>
+        </Section>
+      </div>
+    </ToolShell>
   );
 }
-
-// ============================================================
-//                AI 模型 (Vision LLM) Section
-// ============================================================
 
 function LLMSection() {
   const [providers, setProviders] = useState<ProviderSpec[]>([]);
@@ -143,7 +139,6 @@ function LLMSection() {
     text: string;
   } | null>(null);
 
-  // Load catalog + current settings on mount.
   useEffect(() => {
     Promise.all([fetchProviders(), fetchLLMSettings()])
       .then(([cat, cur]) => {
@@ -160,13 +155,10 @@ function LLMSection() {
       .finally(() => setLoading(false));
   }, []);
 
-  // When provider changes, reset to that provider's default model.
   useEffect(() => {
     const spec = providers.find((p) => p.id === pickedProvider);
     if (!spec) return;
-    if (!spec.models.includes(pickedModel)) {
-      setPickedModel(spec.default_model);
-    }
+    if (!spec.models.includes(pickedModel)) setPickedModel(spec.default_model);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickedProvider]);
 
@@ -190,10 +182,7 @@ function LLMSection() {
         text: r.ok ? `✓ ${r.message}` : `✗ ${r.message}`,
       });
     } catch (e) {
-      setFeedback({
-        kind: "err",
-        text: e instanceof Error ? e.message : String(e),
-      });
+      setFeedback({ kind: "err", text: e instanceof Error ? e.message : String(e) });
     } finally {
       setBusy("idle");
     }
@@ -216,10 +205,7 @@ function LLMSection() {
       setApiKey("");
       setFeedback({ kind: "ok", text: "✓ 已保存，PDF→MD 将走云端 LLM" });
     } catch (e) {
-      setFeedback({
-        kind: "err",
-        text: e instanceof Error ? e.message : String(e),
-      });
+      setFeedback({ kind: "err", text: e instanceof Error ? e.message : String(e) });
     } finally {
       setBusy("idle");
     }
@@ -236,10 +222,7 @@ function LLMSection() {
       setApiKey("");
       setFeedback({ kind: "ok", text: "✓ 已清除" });
     } catch (e) {
-      setFeedback({
-        kind: "err",
-        text: e instanceof Error ? e.message : String(e),
-      });
+      setFeedback({ kind: "err", text: e instanceof Error ? e.message : String(e) });
     } finally {
       setBusy("idle");
     }
@@ -249,8 +232,7 @@ function LLMSection() {
     <Section
       title={
         <span className="inline-flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-blue-500" />
-          AI 模型 (Vision LLM)
+          <Sparkles className="h-4 w-4 text-blue-500" /> AI 模型 (Vision LLM)
         </span>
       }
       desc="配置后 PDF → Markdown 自动走云端视觉大模型，质量最高。不配置则回退到本地 Docling。"
@@ -261,7 +243,6 @@ function LLMSection() {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Current status pill */}
           {current?.has_key && current.provider && current.model && (
             <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200">
               <span className="font-medium">当前已配置：</span>
@@ -271,7 +252,6 @@ function LLMSection() {
             </div>
           )}
 
-          {/* Provider radio cards */}
           <div>
             <label className="mb-2 block text-xs font-medium text-slate-600 dark:text-slate-400">
               Provider
@@ -299,7 +279,6 @@ function LLMSection() {
             </div>
           </div>
 
-          {/* Selected provider description */}
           {spec && (
             <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-400">
               {spec.description}{" "}
@@ -315,7 +294,6 @@ function LLMSection() {
             </div>
           )}
 
-          {/* Model select */}
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
               模型
@@ -323,7 +301,7 @@ function LLMSection() {
             <select
               value={pickedModel}
               onChange={(e) => setPickedModel(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             >
               {spec?.models.map((m) => (
                 <option key={m} value={m}>
@@ -334,11 +312,9 @@ function LLMSection() {
             </select>
           </div>
 
-          {/* API key */}
           <div>
             <label className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400">
-              <KeyRound className="h-3 w-3" />
-              API Key
+              <KeyRound className="h-3 w-3" /> API Key
               {current?.has_key && (
                 <span className="ml-2 text-[10px] text-slate-400">
                   （留空表示保留现有 key）
@@ -351,16 +327,15 @@ function LLMSection() {
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={current?.has_key ? "•••••• 已保存" : "sk-..."}
               autoComplete="off"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-900"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             />
           </div>
 
-          {/* Action buttons */}
           <div className="flex flex-wrap gap-2">
             <button
               onClick={handleSave}
               disabled={busy !== "idle" || !apiKey.trim()}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-700"
             >
               {busy === "saving" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -372,7 +347,7 @@ function LLMSection() {
             <button
               onClick={handleTest}
               disabled={busy !== "idle" || !apiKey.trim()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
             >
               {busy === "testing" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -385,7 +360,7 @@ function LLMSection() {
               <button
                 onClick={handleClear}
                 disabled={busy !== "idle"}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 transition hover:bg-red-100 dark:border-red-900 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
               >
                 <Trash2 className="h-4 w-4" />
                 清除配置
@@ -425,9 +400,7 @@ function Section({
         {title}
       </h2>
       {desc && (
-        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-          {desc}
-        </p>
+        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{desc}</p>
       )}
       <div className="mt-4">{children}</div>
     </section>
