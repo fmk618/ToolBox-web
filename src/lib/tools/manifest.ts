@@ -11,6 +11,12 @@ import { meta as timestamp } from "../../tools/timestamp/meta";
 import { meta as color } from "../../tools/color/meta";
 import { meta as fileConvert } from "../../tools/file-convert/meta";
 import { meta as systemSettings } from "../../tools/system-settings/meta";
+import { meta as regexTest } from "../../tools/regex-test/meta";
+import { meta as htmlEntity } from "../../tools/html-entity/meta";
+import { meta as password } from "../../tools/password/meta";
+import { meta as jwtDecode } from "../../tools/jwt-decode/meta";
+import { meta as timezone } from "../../tools/timezone/meta";
+import { meta as colorContrast } from "../../tools/color-contrast/meta";
 
 type LazyUi = () => Promise<{ default: ComponentType }>;
 
@@ -24,17 +30,29 @@ const UI_LOADERS: Record<string, LazyUi> = {
   color: () => import("../../tools/color/ui"),
   "file-convert": () => import("../../tools/file-convert/ui"),
   settings: () => import("../../tools/system-settings/ui"),
+  "regex-test": () => import("../../tools/regex-test/ui"),
+  "html-entity": () => import("../../tools/html-entity/ui"),
+  password: () => import("../../tools/password/ui"),
+  "jwt-decode": () => import("../../tools/jwt-decode/ui"),
+  timezone: () => import("../../tools/timezone/ui"),
+  "color-contrast": () => import("../../tools/color-contrast/ui"),
 };
 
 const METAS = [
   fileConvert,
   base64,
   urlCodec,
+  htmlEntity,
   jsonFormat,
+  regexTest,
   hash,
+  password,
+  jwtDecode,
   uuid,
   timestamp,
+  timezone,
   color,
+  colorContrast,
   systemSettings,
 ];
 
