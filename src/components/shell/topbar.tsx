@@ -5,6 +5,7 @@ import { useParams, usePathname } from "next/navigation";
 import { ChevronRight, Menu } from "lucide-react";
 import type { SVGProps } from "react";
 import { getTool } from "../../lib/tools/manifest";
+import { WechatButton } from "./wechat-button";
 
 function GitHubMark(props: SVGProps<SVGSVGElement>) {
   return (
@@ -48,6 +49,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <WechatButton />
         <a
           href="https://github.com/fmk618/ToolBox"
           target="_blank"
