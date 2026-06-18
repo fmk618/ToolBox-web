@@ -1,0 +1,28 @@
+node_modules/
+.next/
+out/
+build/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Logs / coverage
+*.log
+npm-debug.log*
+coverage/
+
+# Docs（README 由镜像内构建产出引用）
+*.md
+!README.md
