@@ -2,13 +2,13 @@ import {
   ArrowLeftRight,
   Binary,
   Clock,
-  Code2,
   FileText,
   Globe,
   Image as ImageIcon,
   KeyRound,
   Palette,
   Settings,
+  Wand2,
 } from "lucide-react";
 import type { Category } from "./types";
 
@@ -17,7 +17,7 @@ export const CATEGORIES: Category[] = [
   { id: "codec", label: "编解码", icon: Binary },
   { id: "crypto", label: "加密哈希", icon: KeyRound },
   { id: "text", label: "文本工具", icon: FileText },
-  { id: "dev", label: "开发辅助", icon: Code2 },
+  { id: "dev", label: "实用工具", icon: Wand2 },
   { id: "time", label: "时间日期", icon: Clock },
   { id: "data", label: "颜色数据", icon: Palette },
   { id: "web", label: "网络工具", icon: Globe },
