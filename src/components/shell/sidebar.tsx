@@ -158,13 +158,15 @@ function CategoryGroup({
               isOpen ? "opacity-100" : "opacity-0",
             )}
           >
-            {tools.map((t) => (
+            {tools.map((t, i) => (
               <ToolItem
                 key={t.slug}
                 tool={t}
                 active={t.slug === activeSlug}
                 activeCount={activeCount}
                 onNavigate={onNavigate}
+                isFirst={i === 0}
+                isLast={i === tools.length - 1}
               />
             ))}
           </div>
@@ -179,11 +181,15 @@ function ToolItem({
   active,
   activeCount,
   onNavigate,
+  isFirst,
+  isLast,
 }: {
   tool: Tool;
   active: boolean;
   activeCount: number;
   onNavigate?: () => void;
+  isFirst: boolean;
+  isLast: boolean;
 }) {
   const color = toolColor(t.slug);
   const TIcon = t.icon;
@@ -194,15 +200,30 @@ function ToolItem({
       href={`/tools/${t.slug}`}
       onClick={onNavigate}
       className={cn(
-        "group flex items-center gap-2.5 py-1.5 pl-4 pr-2 text-[13px] outline-none transition-[color,font-weight] duration-200",
+        "group relative flex items-center gap-2.5 py-1.5 pl-4 pr-2 text-[13px] outline-none transition-[color,font-weight] duration-200",
         active
           ? "font-semibold"
           : "font-normal text-muted-foreground hover:text-foreground",
       )}
       style={active ? { color } : undefined}
     >
-      {/* Color dot — replaces the old continuous border-l guide */}
-      <span className="relative grid h-3 w-3 shrink-0 place-items-center">
+      {/* Connector line segments — meet at the dot's center to form a continuous chain.
+          Skipped above the first dot and below the last so the chain ends exactly at the dots. */}
+      {!isFirst && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-[22px] top-0 h-1/2 w-px bg-border"
+        />
+      )}
+      {!isLast && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 left-[22px] h-1/2 w-px bg-border"
+        />
+      )}
+
+      {/* Color dot — sits on top of the connector line */}
+      <span className="relative z-10 grid h-3 w-3 shrink-0 place-items-center">
         <span
           aria-hidden
           className={cn(
