@@ -5,8 +5,8 @@ import { Shell } from "../components/shell/shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Toolbox — 开发者工具集",
-  description: "常用开发者小工具集合，全部本地运行",
+  title: "Toolbox — 工具百宝箱",
+  description: "工具百宝箱 — 常用小工具集合，全部本地运行，按 ⌘K 快速搜索",
 };
 
 export default function RootLayout({

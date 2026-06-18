@@ -21,10 +21,10 @@ export default function HomePage() {
         className="mb-10"
       >
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Toolbox
+          工具百宝箱
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          常用开发者小工具集合，全部本地运行 · 按{" "}
+          常用小工具集合，全部本地运行 · 按{" "}
           <kbd className="rounded border border-border bg-muted px-1 py-px font-mono text-[10px]">
             ⌘ K
           </kbd>{" "}

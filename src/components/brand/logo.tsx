@@ -36,7 +36,8 @@ export function LogoBadge({
     <div
       style={{ width: size, height: size }}
       className={cn(
-        "relative grid shrink-0 place-items-center overflow-hidden rounded-[10px] bg-brand text-brand-foreground shadow-[0_1px_2px_rgb(0_0_0/0.08),inset_0_1px_0_rgb(255_255_255/0.18)]",
+        // bg-foreground/text-background = 浅色模式黑底白字，深色模式白底黑字 —— 自动反相
+        "relative grid shrink-0 place-items-center overflow-hidden rounded-[10px] bg-foreground text-background shadow-[0_1px_2px_rgb(0_0_0/0.12),inset_0_1px_0_rgb(255_255_255/0.08)]",
         className,
       )}
     >
