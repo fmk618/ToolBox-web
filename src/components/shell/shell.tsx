@@ -11,7 +11,6 @@ import { usePathname } from "next/navigation";
 
 export function Shell({ children }: { children: ReactNode }) {
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
-  const [bump, setBump] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
@@ -27,7 +26,7 @@ export function Shell({ children }: { children: ReactNode }) {
       alive = false;
       clearInterval(t);
     };
-  }, [bump]);
+  }, []);
 
   useEffect(() => {
     if (mobileMenuOpen) {
@@ -63,10 +62,7 @@ export function Shell({ children }: { children: ReactNode }) {
           )}
 
           <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar
-              onRefresh={() => setBump((b) => b + 1)}
-              onMenuClick={() => setMobileMenuOpen(true)}
-            />
+            <Topbar onMenuClick={() => setMobileMenuOpen(true)} />
             <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6">
               <AnimatePresence mode="wait">
                 <motion.div
