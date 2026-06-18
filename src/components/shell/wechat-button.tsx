@@ -79,7 +79,7 @@ export function WechatButton({ className }: { className?: string }) {
                   {hasImage ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                      src="/wechat-qr.png"
+                      src="/wechat-qr.jpg"
                       alt="微信公众号二维码"
                       onError={() => setHasImage(false)}
                       className="h-60 w-60 rounded-md border border-border object-contain"
@@ -91,7 +91,7 @@ export function WechatButton({ className }: { className?: string }) {
                           替换二维码图片
                         </div>
                         <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-                          public/wechat-qr.png
+                          public/wechat-qr.jpg
                         </code>
                         <p className="mt-2 text-[11px] leading-relaxed">
                           把图片放到这个路径即可
