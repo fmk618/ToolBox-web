@@ -9,6 +9,7 @@ import { CATEGORIES } from "../../lib/tools/categories";
 import { TOOLS, searchTools } from "../../lib/tools/manifest";
 import { useJobs } from "../../lib/jobs";
 import type { Tool } from "../../lib/tools/types";
+import { toolColor } from "../../lib/tools/colors";
 import { LogoBadge, LogoWordmark } from "../brand/logo";
 import { cn } from "../../lib/utils";
 
@@ -43,12 +44,7 @@ export function Sidebar({
         className="flex items-center gap-2.5 border-b border-border px-5 py-4 transition-colors hover:bg-muted/40"
       >
         <LogoBadge size={36} />
-        <div className="leading-tight">
-          <LogoWordmark />
-          <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-            {TOOLS.length} tools
-          </div>
-        </div>
+        <LogoWordmark />
       </Link>
 
       <div className="px-3 pt-3">
@@ -158,48 +154,92 @@ function CategoryGroup({
         <div className="min-h-0 overflow-hidden">
           <div
             className={cn(
-              "ml-[18px] mt-0.5 border-l border-border transition-opacity duration-200",
+              "mt-0.5 transition-opacity duration-200",
               isOpen ? "opacity-100" : "opacity-0",
             )}
           >
-            {tools.map((t) => {
-              const active = t.slug === activeSlug;
-              const TIcon = t.icon;
-              const showBadge = t.slug === "file-convert" && activeCount > 0;
-              return (
-                <Link
-                  key={t.slug}
-                  href={`/tools/${t.slug}`}
-                  onClick={onNavigate}
-                  className={cn(
-                    "group relative -ml-px flex items-center justify-between gap-2 border-l-2 py-1.5 pl-3 pr-2 text-[13px] transition-all duration-150",
-                    active
-                      ? "border-brand bg-accent font-medium text-accent-foreground"
-                      : "border-transparent text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <TIcon
-                      className={cn(
-                        "h-3.5 w-3.5 shrink-0 transition-colors",
-                        active
-                          ? "text-brand"
-                          : "text-muted-foreground group-hover:text-foreground",
-                      )}
-                    />
-                    <span className="truncate">{t.name}</span>
-                  </span>
-                  {showBadge && (
-                    <span className="rounded-full bg-brand px-1.5 py-px text-[10px] font-semibold text-brand-foreground">
-                      {activeCount}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
+            {tools.map((t) => (
+              <ToolItem
+                key={t.slug}
+                tool={t}
+                active={t.slug === activeSlug}
+                activeCount={activeCount}
+                onNavigate={onNavigate}
+              />
+            ))}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function ToolItem({
+  tool: t,
+  active,
+  activeCount,
+  onNavigate,
+}: {
+  tool: Tool;
+  active: boolean;
+  activeCount: number;
+  onNavigate?: () => void;
+}) {
+  const color = toolColor(t.slug);
+  const TIcon = t.icon;
+  const showBadge = t.slug === "file-convert" && activeCount > 0;
+
+  return (
+    <Link
+      href={`/tools/${t.slug}`}
+      onClick={onNavigate}
+      className={cn(
+        "group flex items-center gap-2.5 py-1.5 pl-4 pr-2 text-[13px] outline-none transition-[color,font-weight] duration-200",
+        active
+          ? "font-semibold"
+          : "font-normal text-muted-foreground hover:text-foreground",
+      )}
+      style={active ? { color } : undefined}
+    >
+      {/* Color dot — replaces the old continuous border-l guide */}
+      <span className="relative grid h-3 w-3 shrink-0 place-items-center">
+        <span
+          aria-hidden
+          className={cn(
+            "rounded-full transition-all duration-200 ease-out",
+            active
+              ? "h-2 w-2"
+              : "h-1.5 w-1.5 opacity-75 group-hover:h-2 group-hover:w-2 group-hover:opacity-100",
+          )}
+          style={{
+            backgroundColor: color,
+            boxShadow: active
+              ? `0 0 0 4px ${color}26, 0 0 8px 0 ${color}55`
+              : undefined,
+          }}
+        />
+      </span>
+
+      <TIcon
+        className={cn(
+          "h-3.5 w-3.5 shrink-0 transition-colors duration-200",
+          active
+            ? ""
+            : "text-muted-foreground/80 group-hover:text-foreground",
+        )}
+        style={active ? { color } : undefined}
+      />
+
+      <span className="truncate">{t.name}</span>
+
+      {showBadge && (
+        <span
+          className="ml-auto rounded-full px-1.5 py-px text-[10px] font-semibold text-white"
+          style={{ backgroundColor: color }}
+        >
+          {activeCount}
+        </span>
+      )}
+    </Link>
   );
 }
