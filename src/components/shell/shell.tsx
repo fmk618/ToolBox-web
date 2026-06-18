@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+import { CommandPaletteProvider } from "./command-palette";
 import { JobsProvider } from "../../lib/jobs";
 import { checkHealth } from "../../lib/api";
+import { usePathname } from "next/navigation";
 
 export function Shell({ children }: { children: ReactNode }) {
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
   const [bump, setBump] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     let alive = true;
@@ -25,7 +29,6 @@ export function Shell({ children }: { children: ReactNode }) {
     };
   }, [bump]);
 
-  // Lock body scroll while the mobile drawer is open.
   useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = "hidden";
@@ -37,39 +40,49 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <JobsProvider>
-      <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900">
-        {/* Desktop sidebar: always visible from lg up. */}
-        <div className="hidden lg:flex">
-          <Sidebar backendOk={backendOk} />
-        </div>
-
-        {/* Mobile drawer: hidden by default, slides in from left when toggled. */}
-        {mobileMenuOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
-            <div
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-              onClick={() => setMobileMenuOpen(false)}
-              aria-hidden
-            />
-            <div className="relative h-full max-w-[260px] shadow-xl">
-              <Sidebar
-                backendOk={backendOk}
-                onNavigate={() => setMobileMenuOpen(false)}
-              />
-            </div>
+      <CommandPaletteProvider>
+        <div className="flex min-h-screen bg-background text-foreground">
+          <div className="hidden lg:flex">
+            <Sidebar backendOk={backendOk} />
           </div>
-        )}
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar
-            onRefresh={() => setBump((b) => b + 1)}
-            onMenuClick={() => setMobileMenuOpen(true)}
-          />
-          <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6">
-            {children}
-          </main>
+          {mobileMenuOpen && (
+            <div className="fixed inset-0 z-50 lg:hidden">
+              <div
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-hidden
+              />
+              <div className="relative h-full max-w-[260px] shadow-xl">
+                <Sidebar
+                  backendOk={backendOk}
+                  onNavigate={() => setMobileMenuOpen(false)}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Topbar
+              onRefresh={() => setBump((b) => b + 1)}
+              onMenuClick={() => setMobileMenuOpen(true)}
+            />
+            <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={pathname}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {children}
+                </motion.div>
+              </AnimatePresence>
+            </main>
+          </div>
         </div>
-      </div>
+      </CommandPaletteProvider>
     </JobsProvider>
   );
 }

@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
-import { ChevronRight, Search, Wrench } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CATEGORIES } from "../../lib/tools/categories";
 import { TOOLS, searchTools } from "../../lib/tools/manifest";
 import { useJobs } from "../../lib/jobs";
 import type { Tool } from "../../lib/tools/types";
+import { LogoBadge, LogoWordmark } from "../brand/logo";
+import { cn } from "../../lib/utils";
 
 export function Sidebar({
   backendOk,
@@ -34,20 +36,16 @@ export function Sidebar({
   }, [visible]);
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-background">
       <Link
         href="/"
         onClick={onNavigate}
-        className="flex items-center gap-2.5 border-b border-slate-200 px-5 py-4 dark:border-slate-800"
+        className="flex items-center gap-2.5 border-b border-border px-5 py-4 transition-colors hover:bg-muted/40"
       >
-        <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-sm">
-          <Wrench className="h-4 w-4" />
-        </div>
-        <div>
-          <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-            Toolbox
-          </div>
-          <div className="text-[10px] uppercase tracking-wider text-slate-400">
+        <LogoBadge size={36} />
+        <div className="leading-tight">
+          <LogoWordmark />
+          <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
             {TOOLS.length} tools
           </div>
         </div>
@@ -55,12 +53,12 @@ export function Sidebar({
 
       <div className="px-3 pt-3">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="搜索工具…"
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-2 text-xs text-slate-900 placeholder:text-slate-400 transition-colors focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:focus:bg-slate-950"
+            className="w-full rounded-md border border-input bg-muted/50 py-1.5 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground transition-colors focus:border-ring focus:bg-background focus:outline-none"
           />
         </div>
       </div>
@@ -79,24 +77,25 @@ export function Sidebar({
           />
         ))}
         {visible.length === 0 && (
-          <div className="px-3 py-6 text-center text-xs text-slate-400">
+          <div className="px-3 py-6 text-center text-xs text-muted-foreground">
             没有匹配的工具
           </div>
         )}
       </nav>
 
-      <div className="border-t border-slate-200 px-4 py-3 text-xs dark:border-slate-800">
+      <div className="border-t border-border px-4 py-3 text-xs">
         <div className="flex items-center gap-2">
           <span
-            className={`h-2 w-2 rounded-full transition-colors ${
+            className={cn(
+              "h-2 w-2 rounded-full transition-colors",
               backendOk === null
-                ? "bg-slate-300"
+                ? "bg-muted-foreground/40"
                 : backendOk
-                  ? "bg-green-500 shadow-[0_0_0_3px_rgba(34,197,94,0.2)]"
-                  : "bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.2)]"
-            }`}
+                  ? "bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]"
+                  : "bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.18)]",
+            )}
           />
-          <span className="text-slate-600 dark:text-slate-400">
+          <span className="text-muted-foreground">
             {backendOk === null
               ? "正在检查后端"
               : backendOk
@@ -104,7 +103,7 @@ export function Sidebar({
                 : "后端未连接"}
           </span>
         </div>
-        <div className="mt-1 text-[10px] text-slate-400">
+        <div className="mt-1 truncate text-[10px] text-muted-foreground/70">
           {pathname === "/" ? "首页" : `/${pathname.split("/").pop()}`}
         </div>
       </div>
@@ -134,24 +133,23 @@ function CategoryGroup({
 
   return (
     <div className="mt-2 first:mt-0">
-      {/* Category header — bigger icon, bolder text, clear visual weight */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="group flex w-full items-center gap-2 rounded-md px-2 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200"
+        className="group flex w-full items-center gap-2 rounded-md px-2 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       >
-        <Icon className="h-4 w-4 shrink-0 text-slate-400 transition-colors group-hover:text-slate-600 dark:group-hover:text-slate-300" />
+        <Icon className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
         <span className="truncate">{label}</span>
-        <span className="ml-auto rounded-full bg-slate-100 px-1.5 py-px text-[10px] font-medium tracking-normal text-slate-500 transition-colors group-hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:group-hover:bg-slate-700">
+        <span className="ml-auto rounded-full bg-muted px-1.5 py-px text-[10px] font-medium tracking-normal text-muted-foreground transition-colors group-hover:bg-background">
           {tools.length}
         </span>
         <ChevronRight
-          className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200 ease-out ${
-            isOpen ? "rotate-90" : ""
-          }`}
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ease-out",
+            isOpen && "rotate-90",
+          )}
         />
       </button>
 
-      {/* Collapsible body — CSS grid-rows trick for smooth height animation */}
       <div
         className="grid transition-[grid-template-rows] duration-200 ease-out"
         style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
@@ -159,9 +157,10 @@ function CategoryGroup({
       >
         <div className="min-h-0 overflow-hidden">
           <div
-            className={`mt-0.5 ml-[18px] border-l border-slate-200 transition-opacity duration-200 dark:border-slate-800 ${
-              isOpen ? "opacity-100" : "opacity-0"
-            }`}
+            className={cn(
+              "ml-[18px] mt-0.5 border-l border-border transition-opacity duration-200",
+              isOpen ? "opacity-100" : "opacity-0",
+            )}
           >
             {tools.map((t) => {
               const active = t.slug === activeSlug;
@@ -172,24 +171,26 @@ function CategoryGroup({
                   key={t.slug}
                   href={`/tools/${t.slug}`}
                   onClick={onNavigate}
-                  className={`group relative -ml-px flex items-center justify-between gap-2 border-l-2 py-1.5 pl-3 pr-2 text-[13px] transition-all duration-150 ${
+                  className={cn(
+                    "group relative -ml-px flex items-center justify-between gap-2 border-l-2 py-1.5 pl-3 pr-2 text-[13px] transition-all duration-150",
                     active
-                      ? "border-blue-500 bg-blue-50/70 font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                      : "border-transparent text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-100"
-                  }`}
+                      ? "border-brand bg-accent font-medium text-accent-foreground"
+                      : "border-transparent text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground",
+                  )}
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <TIcon
-                      className={`h-3.5 w-3.5 shrink-0 transition-colors ${
+                      className={cn(
+                        "h-3.5 w-3.5 shrink-0 transition-colors",
                         active
-                          ? "text-blue-600 dark:text-blue-400"
-                          : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"
-                      }`}
+                          ? "text-brand"
+                          : "text-muted-foreground group-hover:text-foreground",
+                      )}
                     />
                     <span className="truncate">{t.name}</span>
                   </span>
                   {showBadge && (
-                    <span className="rounded-full bg-blue-600 px-1.5 py-px text-[10px] font-semibold text-white">
+                    <span className="rounded-full bg-brand px-1.5 py-px text-[10px] font-semibold text-brand-foreground">
                       {activeCount}
                     </span>
                   )}

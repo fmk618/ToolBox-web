@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import { Shell } from "../components/shell/shell";
 import "./globals.css";
 
@@ -11,8 +13,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-CN" className="h-full antialiased">
-      <body className="min-h-full bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+    <html
+      lang="zh-CN"
+      className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full bg-background font-sans text-foreground">
         <Shell>{children}</Shell>
       </body>
     </html>
