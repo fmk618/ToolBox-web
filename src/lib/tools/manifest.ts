@@ -26,6 +26,7 @@ import { meta as calculator } from "../../tools/calculator/meta";
 import { meta as unitConvert } from "../../tools/unit-convert/meta";
 import { meta as pomodoro } from "../../tools/pomodoro/meta";
 import { meta as imageCompress } from "../../tools/image-compress/meta";
+import { meta as imageConvert } from "../../tools/image-convert/meta";
 import { meta as pdfMerge } from "../../tools/pdf-merge/meta";
 
 type LazyUi = () => Promise<{ default: ComponentType }>;
@@ -55,6 +56,7 @@ const UI_LOADERS: Record<string, LazyUi> = {
   "unit-convert": () => import("../../tools/unit-convert/ui"),
   pomodoro: () => import("../../tools/pomodoro/ui"),
   "image-compress": () => import("../../tools/image-compress/ui"),
+  "image-convert": () => import("../../tools/image-convert/ui"),
   "pdf-merge": () => import("../../tools/pdf-merge/ui"),
 };
 
@@ -77,6 +79,7 @@ const METAS = [
   uuid,
   qrcode,
   imageCompress,
+  imageConvert,
   timestamp,
   timezone,
   pomodoro,
