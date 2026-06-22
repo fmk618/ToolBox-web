@@ -37,6 +37,9 @@ export default function FileConvertUi() {
     [routes, src],
   );
 
+  // Step number for the task queue: only count steps that are actually rendered.
+  const taskStep = 2 + (src ? 1 : 0) + (src && dst ? 1 : 0);
+
   function selectSrc(fmt: string) {
     setSrc(fmt);
     setDst(null);
@@ -137,7 +140,7 @@ export default function FileConvertUi() {
 
         {recentJobs.length > 0 && (
           <StepSection
-            step={4}
+            step={taskStep}
             title="任务"
             hint={
               <span className="inline-flex items-center gap-1">
