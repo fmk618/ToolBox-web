@@ -22,6 +22,11 @@ import { meta as yamlJson } from "../../tools/yaml-json/meta";
 import { meta as markdownPreview } from "../../tools/markdown-preview/meta";
 import { meta as textDiff } from "../../tools/text-diff/meta";
 import { meta as cronParse } from "../../tools/cron-parse/meta";
+import { meta as calculator } from "../../tools/calculator/meta";
+import { meta as unitConvert } from "../../tools/unit-convert/meta";
+import { meta as pomodoro } from "../../tools/pomodoro/meta";
+import { meta as imageCompress } from "../../tools/image-compress/meta";
+import { meta as pdfMerge } from "../../tools/pdf-merge/meta";
 
 type LazyUi = () => Promise<{ default: ComponentType }>;
 
@@ -46,10 +51,16 @@ const UI_LOADERS: Record<string, LazyUi> = {
   "markdown-preview": () => import("../../tools/markdown-preview/ui"),
   "text-diff": () => import("../../tools/text-diff/ui"),
   "cron-parse": () => import("../../tools/cron-parse/ui"),
+  calculator: () => import("../../tools/calculator/ui"),
+  "unit-convert": () => import("../../tools/unit-convert/ui"),
+  pomodoro: () => import("../../tools/pomodoro/ui"),
+  "image-compress": () => import("../../tools/image-compress/ui"),
+  "pdf-merge": () => import("../../tools/pdf-merge/ui"),
 };
 
 const METAS = [
   fileConvert,
+  pdfMerge,
   base64,
   urlCodec,
   htmlEntity,
@@ -61,10 +72,14 @@ const METAS = [
   hash,
   password,
   jwtDecode,
+  calculator,
+  unitConvert,
   uuid,
   qrcode,
+  imageCompress,
   timestamp,
   timezone,
+  pomodoro,
   cronParse,
   color,
   colorContrast,
