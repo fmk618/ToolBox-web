@@ -6,27 +6,11 @@ import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { CommandPaletteProvider } from "./command-palette";
 import { JobsProvider } from "../../lib/jobs";
-import { checkHealth } from "../../lib/api";
 import { usePathname } from "next/navigation";
 
 export function Shell({ children }: { children: ReactNode }) {
-  const [backendOk, setBackendOk] = useState<boolean | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-
-  useEffect(() => {
-    let alive = true;
-    checkHealth().then((ok) => {
-      if (alive) setBackendOk(ok);
-    });
-    const t = setInterval(() => {
-      checkHealth().then((ok) => alive && setBackendOk(ok));
-    }, 15000);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, []);
 
   useEffect(() => {
     if (mobileMenuOpen) {
@@ -42,7 +26,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <CommandPaletteProvider>
         <div className="flex min-h-screen bg-background text-foreground">
           <div className="hidden lg:flex">
-            <Sidebar backendOk={backendOk} />
+            <Sidebar />
           </div>
 
           {mobileMenuOpen && (
@@ -53,10 +37,7 @@ export function Shell({ children }: { children: ReactNode }) {
                 aria-hidden
               />
               <div className="relative h-full max-w-[260px] shadow-xl">
-                <Sidebar
-                  backendOk={backendOk}
-                  onNavigate={() => setMobileMenuOpen(false)}
-                />
+                <Sidebar onNavigate={() => setMobileMenuOpen(false)} />
               </div>
             </div>
           )}

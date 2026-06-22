@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { ChevronRight, Search } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -14,13 +14,10 @@ import { LogoBadge, LogoWordmark } from "../brand/logo";
 import { cn } from "../../lib/utils";
 
 export function Sidebar({
-  backendOk,
   onNavigate,
 }: {
-  backendOk: boolean | null;
   onNavigate?: () => void;
 }) {
-  const pathname = usePathname();
   const params = useParams<{ slug?: string }>();
   const activeSlug = params?.slug;
   const { activeCount } = useJobs();
@@ -78,31 +75,6 @@ export function Sidebar({
           </div>
         )}
       </nav>
-
-      <div className="border-t border-border px-4 py-3 text-xs">
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "h-2 w-2 rounded-full transition-colors",
-              backendOk === null
-                ? "bg-muted-foreground/40"
-                : backendOk
-                  ? "bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]"
-                  : "bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.18)]",
-            )}
-          />
-          <span className="text-muted-foreground">
-            {backendOk === null
-              ? "正在检查后端"
-              : backendOk
-                ? "后端已连接"
-                : "后端未连接"}
-          </span>
-        </div>
-        <div className="mt-1 truncate text-[10px] text-muted-foreground/70">
-          {pathname === "/" ? "首页" : `/${pathname.split("/").pop()}`}
-        </div>
-      </div>
     </aside>
   );
 }
