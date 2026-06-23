@@ -28,6 +28,10 @@ import { meta as pomodoro } from "../../tools/pomodoro/meta";
 import { meta as imageCompress } from "../../tools/image-compress/meta";
 import { meta as imageConvert } from "../../tools/image-convert/meta";
 import { meta as pdfMerge } from "../../tools/pdf-merge/meta";
+import { meta as baseConvert } from "../../tools/base-convert/meta";
+import { meta as textStat } from "../../tools/text-stat/meta";
+import { meta as mockData } from "../../tools/mock-data/meta";
+import { meta as svgMin } from "../../tools/svg-min/meta";
 
 type LazyUi = () => Promise<{ default: ComponentType }>;
 
@@ -58,6 +62,10 @@ const UI_LOADERS: Record<string, LazyUi> = {
   "image-compress": () => import("../../tools/image-compress/ui"),
   "image-convert": () => import("../../tools/image-convert/ui"),
   "pdf-merge": () => import("../../tools/pdf-merge/ui"),
+  "base-convert": () => import("../../tools/base-convert/ui"),
+  "text-stat": () => import("../../tools/text-stat/ui"),
+  "mock-data": () => import("../../tools/mock-data/ui"),
+  "svg-min": () => import("../../tools/svg-min/ui"),
 };
 
 const METAS = [
@@ -70,16 +78,20 @@ const METAS = [
   yamlJson,
   markdownPreview,
   textDiff,
+  textStat,
   regexTest,
   hash,
   password,
   jwtDecode,
   calculator,
   unitConvert,
+  baseConvert,
+  mockData,
   uuid,
   qrcode,
   imageCompress,
   imageConvert,
+  svgMin,
   timestamp,
   timezone,
   pomodoro,
