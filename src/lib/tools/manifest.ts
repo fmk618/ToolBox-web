@@ -32,6 +32,9 @@ import { meta as baseConvert } from "../../tools/base-convert/meta";
 import { meta as textStat } from "../../tools/text-stat/meta";
 import { meta as mockData } from "../../tools/mock-data/meta";
 import { meta as svgMin } from "../../tools/svg-min/meta";
+import { meta as loanCalc } from "../../tools/loan-calc/meta";
+import { meta as dateCalc } from "../../tools/date-calc/meta";
+import { meta as pdfSplit } from "../../tools/pdf-split/meta";
 
 type LazyUi = () => Promise<{ default: ComponentType }>;
 
@@ -66,11 +69,15 @@ const UI_LOADERS: Record<string, LazyUi> = {
   "text-stat": () => import("../../tools/text-stat/ui"),
   "mock-data": () => import("../../tools/mock-data/ui"),
   "svg-min": () => import("../../tools/svg-min/ui"),
+  "loan-calc": () => import("../../tools/loan-calc/ui"),
+  "date-calc": () => import("../../tools/date-calc/ui"),
+  "pdf-split": () => import("../../tools/pdf-split/ui"),
 };
 
 const METAS = [
   fileConvert,
   pdfMerge,
+  pdfSplit,
   base64,
   urlCodec,
   htmlEntity,
@@ -87,6 +94,7 @@ const METAS = [
   unitConvert,
   baseConvert,
   mockData,
+  loanCalc,
   uuid,
   qrcode,
   imageCompress,
@@ -94,6 +102,7 @@ const METAS = [
   svgMin,
   timestamp,
   timezone,
+  dateCalc,
   pomodoro,
   cronParse,
   color,
