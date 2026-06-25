@@ -10,7 +10,19 @@ import { usePathname } from "next/navigation";
 
 export function Shell({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [offline, setOffline] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const h = () => setOffline(!navigator.onLine);
+    window.addEventListener("online", h);
+    window.addEventListener("offline", h);
+    setOffline(!navigator.onLine);
+    return () => {
+      window.removeEventListener("online", h);
+      window.removeEventListener("offline", h);
+    };
+  }, []);
 
   useEffect(() => {
     if (mobileMenuOpen) {
@@ -43,6 +55,11 @@ export function Shell({ children }: { children: ReactNode }) {
           )}
 
           <div className="flex min-w-0 flex-1 flex-col">
+            {offline && (
+              <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-1.5 text-center text-xs text-amber-700 dark:text-amber-300">
+                已离线 · 本地工具仍可使用，文件转换功能不可用
+              </div>
+            )}
             <Topbar onMenuClick={() => setMobileMenuOpen(true)} />
             <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6">
               <AnimatePresence mode="wait">

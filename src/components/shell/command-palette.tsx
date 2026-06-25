@@ -4,11 +4,13 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Command } from "cmdk";
-import { Search, Sparkles } from "lucide-react";
+import { Clock, Search, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CATEGORIES, categoryById } from "../../lib/tools/categories";
 import { TOOLS } from "../../lib/tools/manifest";
+import { useRecents } from "../../lib/recents";
 import { cn } from "../../lib/utils";
+import type { Tool } from "../../lib/tools/types";
 
 type Ctx = {
   open: boolean;
@@ -54,6 +56,13 @@ export function useCommandPalette() {
 function CommandPalette() {
   const { open, setOpen } = useCommandPalette();
   const router = useRouter();
+  const [search, setSearch] = React.useState("");
+  const recentSlugs = useRecents();
+
+  const recentTools = React.useMemo(
+    () => recentSlugs.map((s) => TOOLS.find((t) => t.slug === s)).filter((t): t is Tool => t !== undefined),
+    [recentSlugs],
+  );
 
   function go(slug: string) {
     setOpen(false);
@@ -116,6 +125,7 @@ function CommandPalette() {
                     <Command.Input
                       autoFocus
                       placeholder="搜索工具…"
+                      onValueChange={setSearch}
                       className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
                     />
                     <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
@@ -127,6 +137,25 @@ function CommandPalette() {
                     <Command.Empty className="px-4 py-8 text-center text-sm text-muted-foreground">
                       没有匹配的工具
                     </Command.Empty>
+
+                    {/* Recents — shown only when search is empty */}
+                    {!search && recentTools.length > 0 && (
+                      <Command.Group
+                        heading={<PaletteHeading icon={Clock} text="最近使用" />}
+                        className="text-xs font-medium text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5"
+                      >
+                        {recentTools.slice(0, 5).map((t) => (
+                          <PaletteItem
+                            key={t.slug}
+                            value={`recent ${t.name} ${t.slug}`}
+                            onSelect={() => go(t.slug)}
+                            icon={t.icon}
+                            title={t.name}
+                            subtitle={t.description}
+                          />
+                        ))}
+                      </Command.Group>
+                    )}
 
                     {/* Home shortcut */}
                     <Command.Group
