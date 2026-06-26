@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { convertFile } from "./api";
+import { submitJob, pollJob, downloadJobResult } from "./api";
 import { addHistory } from "./history";
 
 export type JobStatus =
@@ -75,18 +75,33 @@ export function JobsProvider({ children }: { children: ReactNode }) {
     setJob(next.id, { status: "uploading", progress: 0 });
 
     try {
-      const { blob, filename } = await convertFile(
-        next.file,
-        next.dstFmt,
-        (percent) => {
-          // While upload is in flight, show real percentage.
-          setJob(next.id, { progress: percent });
-          if (percent >= 100) {
-            // Switch to indeterminate "server processing" phase.
-            setJob(next.id, { status: "processing", progress: -1 });
-          }
-        },
-      );
+      // Phase 1: Upload — real XHR upload progress 0→100%
+      const { job_id } = await submitJob(next.file, next.dstFmt, (percent) => {
+        setJob(next.id, { progress: percent });
+      });
+
+      // Phase 2: Processing — poll backend for real step-based progress
+      setJob(next.id, { status: "processing", progress: 0 });
+      const fallback = `${next.filename.replace(/\.[^.]+$/, "")}.${next.dstFmt}`;
+      let resultFilename = fallback;
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        await new Promise<void>((r) => setTimeout(r, 300));
+        const status = await pollJob(job_id);
+
+        if (status.status === "done") {
+          resultFilename = status.filename ?? fallback;
+          break;
+        }
+        if (status.status === "failed") {
+          throw new Error(status.error ?? "转换失败");
+        }
+        setJob(next.id, { progress: status.progress });
+      }
+
+      // Phase 3: Download result
+      const { blob, filename } = await downloadJobResult(job_id, resultFilename);
       const url = URL.createObjectURL(blob);
       setJob(next.id, {
         status: "done",

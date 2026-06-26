@@ -24,25 +24,12 @@ export function ProgressBar({
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800" />
     );
   }
-  if (percent < 0 || status === "processing") {
-    // indeterminate striped animation
-    return (
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-        <div className="h-full w-1/3 animate-[indeterminate_1.4s_infinite_linear] rounded-full bg-blue-500" />
-        <style jsx>{`
-          @keyframes indeterminate {
-            0%   { transform: translateX(-100%); }
-            100% { transform: translateX(400%); }
-          }
-        `}</style>
-      </div>
-    );
-  }
+  // Real progress (uploading or processing with known percent)
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
       <div
-        className="h-full bg-blue-500 transition-[width]"
-        style={{ width: `${percent}%` }}
+        className="h-full bg-blue-500 transition-[width] duration-300 ease-out"
+        style={{ width: `${Math.max(0, percent)}%` }}
       />
     </div>
   );

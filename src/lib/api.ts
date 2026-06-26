@@ -120,7 +120,71 @@ export function reachableFormats(routes: Routes, src: string | null): string[] {
 }
 
 /**
+ * POST /jobs — upload file and start async conversion job.
+ * Returns job_id immediately; use pollJob() and downloadJobResult() for progress.
+ */
+export function submitJob(
+  file: File,
+  to: string,
+  onUploadProgress?: (percent: number) => void,
+): Promise<{ job_id: string }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${FILE_CONVERT}/jobs?to=${encodeURIComponent(to)}`);
+    xhr.responseType = "json";
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onUploadProgress) {
+        onUploadProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.response as { job_id: string });
+      } else {
+        reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("网络错误，请检查后端服务"));
+    xhr.onabort = () => reject(new Error("已取消"));
+
+    const fd = new FormData();
+    fd.append("file", file);
+    xhr.send(fd);
+  });
+}
+
+export type JobStatusResponse = {
+  status: "processing" | "done" | "failed";
+  progress: number;
+  error?: string | null;
+  filename?: string | null;
+};
+
+/** GET /jobs/{job_id} — poll conversion progress. */
+export async function pollJob(jobId: string): Promise<JobStatusResponse> {
+  const res = await fetch(`${FILE_CONVERT}/jobs/${jobId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+/** GET /jobs/{job_id}/result — download converted file. */
+export async function downloadJobResult(
+  jobId: string,
+  fallbackFilename: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetch(`${FILE_CONVERT}/jobs/${jobId}/result`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const cd = res.headers.get("content-disposition") ?? "";
+  const match = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+  const filename = match?.[1]?.replace(/['"]/g, "") || fallbackFilename;
+  return { blob: await res.blob(), filename };
+}
+
+/**
  * POST /convert with XHR (so we can track upload progress, which fetch() can't).
+ * @deprecated Use submitJob + pollJob + downloadJobResult for real progress tracking.
  */
 export function convertFile(
   file: File,
