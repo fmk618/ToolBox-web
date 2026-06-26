@@ -8,6 +8,8 @@ const baseConfig: NextConfig = {
   output: isTauri ? "export" : "standalone",
   ...(isTauri && { images: { unoptimized: true } }),
   devIndicators: false,
+  // 消除 Next.js 16 Turbopack 与 next-pwa webpack 配置的冲突警告
+  turbopack: {},
 };
 
 export default isTauri
