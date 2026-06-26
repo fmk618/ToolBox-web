@@ -1,6 +1,4 @@
-import dynamic from "next/dynamic";
-import type { ComponentType } from "react";
-import type { Tool } from "./types";
+import type { ToolMeta } from "./types";
 
 import { meta as base64 } from "../../tools/base64/meta";
 import { meta as urlCodec } from "../../tools/url-codec/meta";
@@ -37,46 +35,8 @@ import { meta as loanCalc } from "../../tools/loan-calc/meta";
 import { meta as dateCalc } from "../../tools/date-calc/meta";
 import { meta as pdfSplit } from "../../tools/pdf-split/meta";
 
-type LazyUi = () => Promise<{ default: ComponentType }>;
-
-const UI_LOADERS: Record<string, LazyUi> = {
-  base64: () => import("../../tools/base64/ui"),
-  "url-codec": () => import("../../tools/url-codec/ui"),
-  "json-format": () => import("../../tools/json-format/ui"),
-  hash: () => import("../../tools/hash/ui"),
-  uuid: () => import("../../tools/uuid/ui"),
-  timestamp: () => import("../../tools/timestamp/ui"),
-  color: () => import("../../tools/color/ui"),
-  "file-convert": () => import("../../tools/file-convert/ui"),
-  settings: () => import("../../tools/system-settings/ui"),
-  "regex-test": () => import("../../tools/regex-test/ui"),
-  "html-entity": () => import("../../tools/html-entity/ui"),
-  password: () => import("../../tools/password/ui"),
-  "jwt-decode": () => import("../../tools/jwt-decode/ui"),
-  timezone: () => import("../../tools/timezone/ui"),
-  "color-contrast": () => import("../../tools/color-contrast/ui"),
-  qrcode: () => import("../../tools/qrcode/ui"),
-  "yaml-json": () => import("../../tools/yaml-json/ui"),
-  "markdown-preview": () => import("../../tools/markdown-preview/ui"),
-  "text-diff": () => import("../../tools/text-diff/ui"),
-  "cron-parse": () => import("../../tools/cron-parse/ui"),
-  calculator: () => import("../../tools/calculator/ui"),
-  "unit-convert": () => import("../../tools/unit-convert/ui"),
-  pomodoro: () => import("../../tools/pomodoro/ui"),
-  "image-compress": () => import("../../tools/image-compress/ui"),
-  "image-convert": () => import("../../tools/image-convert/ui"),
-  "pdf-merge": () => import("../../tools/pdf-merge/ui"),
-  "base-convert": () => import("../../tools/base-convert/ui"),
-  "text-stat": () => import("../../tools/text-stat/ui"),
-  "mock-data": () => import("../../tools/mock-data/ui"),
-  "svg-min": () => import("../../tools/svg-min/ui"),
-  "code-screenshot": () => import("../../tools/code-screenshot/ui"),
-  "loan-calc": () => import("../../tools/loan-calc/ui"),
-  "date-calc": () => import("../../tools/date-calc/ui"),
-  "pdf-split": () => import("../../tools/pdf-split/ui"),
-};
-
-const METAS = [
+// 纯静态元数据，不含 dynamic() — 可被 Server Component 安全导入
+export const TOOLS: ToolMeta[] = [
   fileConvert,
   pdfMerge,
   pdfSplit,
@@ -113,19 +73,11 @@ const METAS = [
   systemSettings,
 ];
 
-export const TOOLS: Tool[] = METAS.map((m) => ({
-  ...m,
-  component: dynamic(UI_LOADERS[m.slug], {
-    loading: () => null,
-    ssr: false,
-  }),
-}));
-
-export function getTool(slug: string): Tool | undefined {
+export function getTool(slug: string): ToolMeta | undefined {
   return TOOLS.find((t) => t.slug === slug);
 }
 
-export function searchTools(query: string): Tool[] {
+export function searchTools(query: string): ToolMeta[] {
   const q = query.trim().toLowerCase();
   if (!q) return TOOLS;
   return TOOLS.filter((t) => {
@@ -137,7 +89,7 @@ export function searchTools(query: string): Tool[] {
 }
 
 export function toolsByCategory() {
-  const map = new Map<string, Tool[]>();
+  const map = new Map<string, ToolMeta[]>();
   for (const t of TOOLS) {
     if (!map.has(t.category)) map.set(t.category, []);
     map.get(t.category)!.push(t);

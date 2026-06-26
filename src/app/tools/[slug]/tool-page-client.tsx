@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { notFound, useParams } from "next/navigation";
-import { getTool } from "../../../lib/tools/manifest";
+import { getTool } from "../../../lib/tools/manifest-client";
 import { pushRecent } from "../../../lib/recents";
 
 export default function ToolPageClient() {
