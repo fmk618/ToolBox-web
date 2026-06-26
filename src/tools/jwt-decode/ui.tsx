@@ -62,7 +62,7 @@ export default function JwtDecodeUi() {
     (payload.exp as number) * 1000 < Date.now();
 
   return (
-    <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
+    <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
         <ToolField label="JWT Token">
           <textarea

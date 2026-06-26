@@ -4,6 +4,19 @@ import { useMemo, useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
 import { meta } from "./meta";
 
+const EXAMPLES = [
+  { label: "邮箱", pattern: "[\\w.+-]+@[\\w-]+\\.[\\w.]+", flags: "g", sample: "联系 alice@example.com 或 bob.test+tag@mail.org" },
+  { label: "手机号", pattern: "1[3-9]\\d{9}", flags: "g", sample: "电话 13812345678，备用 19987654321" },
+  { label: "中文", pattern: "[\\u4e00-\\u9fa5]+", flags: "g", sample: "Hello 世界，welcome 欢迎" },
+  { label: "日期", pattern: "\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}", flags: "g", sample: "2024-01-15 或 2024/6/8" },
+  { label: "URL", pattern: "https?://[\\w/:%#$&?()~.=+\\-]+", flags: "gi", sample: "访问 https://example.com/path?q=1 了解详情" },
+  { label: "IP 地址", pattern: "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}", flags: "g", sample: "服务器 192.168.1.1 和 10.0.0.255" },
+  { label: "身份证", pattern: "[1-9]\\d{5}(19|20)\\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\\d|3[01])\\d{3}[\\dX]", flags: "gi", sample: "110101199001011234" },
+  { label: "十六进制色", pattern: "#[0-9a-fA-F]{3,6}\\b", flags: "g", sample: "颜色 #fff #3a7bd5 #FF0000" },
+  { label: "整数/小数", pattern: "-?\\d+(\\.\\d+)?", flags: "g", sample: "价格 -3.14，数量 42，折扣 0.85" },
+  { label: "HTML 标签", pattern: "<[^>]+>", flags: "g", sample: "<div class=\"box\"><p>内容</p></div>" },
+] as const;
+
 const FLAG_OPTIONS = [
   { f: "g", label: "全局 g" },
   { f: "i", label: "忽略大小写 i" },
@@ -92,9 +105,30 @@ export default function RegexTestUi() {
     setFlags((cur) => (cur.includes(f) ? cur.replace(f, "") : cur + f));
   }
 
+  function loadExample(ex: (typeof EXAMPLES)[number]) {
+    setPattern(ex.pattern);
+    setFlags(ex.flags);
+    setInput(ex.sample);
+  }
+
   return (
-    <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
+    <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
+        <div>
+          <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">常用示例 — 点击快速加载</p>
+          <div className="flex flex-wrap gap-1.5">
+            {EXAMPLES.map((ex) => (
+              <button
+                key={ex.label}
+                onClick={() => loadExample(ex)}
+                className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
+              >
+                {ex.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <ToolField label="正则表达式" hint={`/${pattern}/${flags}`}>
           <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 dark:border-slate-700 dark:bg-slate-950">
             <span className="font-mono text-sm text-slate-400">/</span>

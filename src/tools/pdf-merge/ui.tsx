@@ -95,7 +95,7 @@ export default function PdfMergeUi() {
   const totalPages = items.reduce((s, x) => s + (x.pages ?? 0), 0);
 
   return (
-    <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
+    <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
         <DropZone onFiles={addFiles} />
 

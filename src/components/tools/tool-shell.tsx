@@ -2,16 +2,20 @@
 
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 export function ToolShell({
   icon: Icon,
   title,
   description,
+  local,
   children,
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
+  /** 纯本地工具：展示"不上传"提示，消除用户对隐私的顾虑 */
+  local?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -27,6 +31,12 @@ export function ToolShell({
           <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
             {description}
           </p>
+          {local && (
+            <span className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[11px] text-green-700 dark:border-green-900 dark:bg-green-950/50 dark:text-green-400">
+              <ShieldCheck className="h-3 w-3" />
+              本地处理 · 文件与数据不会上传至任何服务器 · 仅保存在您的浏览器中
+            </span>
+          )}
         </div>
       </header>
       <div>{children}</div>

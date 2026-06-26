@@ -52,7 +52,7 @@ export default function PasswordUi() {
   }
 
   return (
-    <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
+    <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
         <ToolField label="生成结果" action={<CopyButton value={password} />}>
           <div className="flex items-stretch gap-2">

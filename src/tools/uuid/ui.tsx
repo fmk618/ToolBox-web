@@ -17,7 +17,7 @@ export default function UuidUi() {
   const joined = list.join("\n");
 
   return (
-    <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
+    <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
         <div className="flex flex-wrap items-end gap-3">
           <ToolField label="数量">

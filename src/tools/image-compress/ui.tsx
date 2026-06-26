@@ -99,7 +99,7 @@ export default function ImageCompressUi() {
   const pending = items.filter((i) => i.status === "pending").length;
 
   return (
-    <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
+    <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <ToolField label="目标大小（KB）" hint={`${maxKB} KB`}>

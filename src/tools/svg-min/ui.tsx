@@ -70,7 +70,7 @@ export default function SvgMinUi() {
   const saving    = pct(origBytes, optBytes);
 
   return (
-    <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
+    <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
         {/* Input */}
         <div>

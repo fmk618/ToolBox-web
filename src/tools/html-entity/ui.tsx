@@ -29,7 +29,7 @@ export default function HtmlEntityUi() {
   }, [input, mode]);
 
   return (
-    <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
+    <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
         <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm dark:border-slate-700 dark:bg-slate-950">
           {(["encode", "decode"] as const).map((m) => (

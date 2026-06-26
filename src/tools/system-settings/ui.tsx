@@ -98,7 +98,7 @@ export default function SystemSettingsUi() {
           </div>
         </Section>
 
-        <Section title="本地数据" desc="清理浏览器中保存的历史记录">
+        <Section title="本地数据" desc="清理浏览器中保存的历史记录、收藏与最近使用">
           <button
             onClick={() => {
               if (confirm("确认清空全部转换历史？")) clearHistory();
@@ -107,15 +107,6 @@ export default function SystemSettingsUi() {
           >
             清空转换历史
           </button>
-        </Section>
-
-        <Section title="关于" desc="Toolbox v0.1.0">
-          <ul className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
-            <li>· 后端核心：Python + FastAPI + Typer</li>
-            <li>· 引擎层：Vision-LLM · Docling · MarkItDown · Pandoc · LibreOffice</li>
-            <li>· 路由：BFS 自动找最短转换路径</li>
-            <li>· License：MIT</li>
-          </ul>
         </Section>
       </div>
     </ToolShell>
@@ -297,38 +288,43 @@ function LLMSection() {
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
               模型
+              <span className="ml-2 font-normal text-slate-400">
+                — 可直接输入任意模型名，厂商新模型无需等待更新
+              </span>
             </label>
-            <select
+            <input
+              list={`models-${pickedProvider}`}
               value={pickedModel}
               onChange={(e) => setPickedModel(e.target.value)}
+              placeholder="输入或从下拉选择模型名称"
               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            >
+            />
+            <datalist id={`models-${pickedProvider}`}>
               {spec?.models.map((m) => (
                 <option key={m} value={m}>
-                  {m}
-                  {m === spec.default_model ? "（推荐）" : ""}
+                  {m === spec.default_model ? `${m}（推荐）` : m}
                 </option>
               ))}
-            </select>
+            </datalist>
           </div>
 
           <div>
             <label className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400">
               <KeyRound className="h-3 w-3" /> API Key
-              {current?.has_key && (
-                <span className="ml-2 text-[10px] text-slate-400">
-                  （留空表示保留现有 key）
-                </span>
-              )}
             </label>
             <input
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder={current?.has_key ? "•••••• 已保存" : "sk-..."}
+              placeholder={current?.has_key ? "已保存 — 留空则保留现有 Key" : "粘贴你的 API Key，如 sk-..."}
               autoComplete="off"
               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             />
+            <p className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+              {current?.has_key
+                ? `✓ 已保存 Key（${current.key_preview}）· Key 加密存储在服务器本地，不上传第三方 · 留空点保存 = 保留现有 Key · 如需更换，输入新 Key 后保存`
+                : "Key 仅保存在运行 Toolbox 后端的服务器本地，不会上传至任何第三方 · 不配置则 PDF→Markdown 使用本地 Docling，质量较低"}
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-2">

@@ -35,7 +35,7 @@ export default function HashUi() {
   }, [input]);
 
   return (
-    <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
+    <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
         <ToolField label="输入文本">
           <textarea

@@ -86,7 +86,7 @@ export default function ImageConvertUi() {
   const src = file ? srcFmt(file.name) : null;
 
   return (
-    <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
+    <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
 
         {/* Drop zone */}
