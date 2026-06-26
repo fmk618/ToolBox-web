@@ -22,14 +22,7 @@ export type ProviderSpec = {
   description: string;
 };
 
-export type LLMSettingsView = {
-  provider: string | null;
-  model: string | null;
-  has_key: boolean;
-  key_preview: string;
-};
-
-export type LLMSettingsBody = {
+export type LLMTestBody = {
   provider: string;
   model: string;
   api_key: string;
@@ -41,46 +34,12 @@ export async function fetchProviders(): Promise<ProviderSpec[]> {
   return res.json();
 }
 
-export async function fetchLLMSettings(): Promise<LLMSettingsView> {
-  const res = await fetch(`${API_BASE}/settings/llm`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-
-export async function saveLLMSettings(
-  body: LLMSettingsBody,
-  adminToken?: string,
-): Promise<LLMSettingsView> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (adminToken) headers["Authorization"] = `Bearer ${adminToken}`;
-  const res = await fetch(`${API_BASE}/settings/llm`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(txt || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function clearLLMSettings(adminToken?: string): Promise<void> {
-  const headers: Record<string, string> = {};
-  if (adminToken) headers["Authorization"] = `Bearer ${adminToken}`;
-  const res = await fetch(`${API_BASE}/settings/llm`, { method: "DELETE", headers });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-}
-
 export async function testLLMSettings(
-  body: LLMSettingsBody,
-  adminToken?: string,
+  body: LLMTestBody,
 ): Promise<{ ok: boolean; message: string }> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (adminToken) headers["Authorization"] = `Bearer ${adminToken}`;
   const res = await fetch(`${API_BASE}/settings/llm/test`, {
     method: "POST",
-    headers,
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -131,10 +90,17 @@ export function reachableFormats(routes: Routes, src: string | null): string[] {
  * POST /jobs — upload file and start async conversion job.
  * Returns job_id immediately; use pollJob() and downloadJobResult() for progress.
  */
+export type LLMConfig = {
+  provider: string;
+  model: string;
+  api_key: string;
+};
+
 export function submitJob(
   file: File,
   to: string,
   onUploadProgress?: (percent: number) => void,
+  llmConfig?: LLMConfig,
 ): Promise<{ job_id: string }> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -159,6 +125,11 @@ export function submitJob(
 
     const fd = new FormData();
     fd.append("file", file);
+    if (llmConfig) {
+      fd.append("llm_provider", llmConfig.provider);
+      fd.append("llm_model", llmConfig.model);
+      fd.append("llm_api_key", llmConfig.api_key);
+    }
     xhr.send(fd);
   });
 }

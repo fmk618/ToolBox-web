@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { submitJob, pollJob, downloadJobResult } from "./api";
+import { loadLLMConfig } from "./llm-config";
 import { addHistory } from "./history";
 
 export type JobStatus =
@@ -76,9 +77,10 @@ export function JobsProvider({ children }: { children: ReactNode }) {
 
     try {
       // Phase 1: Upload — real XHR upload progress 0→100%
+      const llmConfig = loadLLMConfig() ?? undefined;
       const { job_id } = await submitJob(next.file, next.dstFmt, (percent) => {
         setJob(next.id, { progress: percent });
-      });
+      }, llmConfig);
 
       // Phase 2: Processing — poll backend for real step-based progress
       setJob(next.id, { status: "processing", progress: 0 });
