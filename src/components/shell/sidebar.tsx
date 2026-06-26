@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { ChevronRight, Clock, Search, Star, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CATEGORIES } from "../../lib/tools/categories";
-import { TOOLS, searchTools } from "../../lib/tools/manifest";
+import { TOOLS } from "../../lib/tools/manifest";
 import { useJobs } from "../../lib/jobs";
 import type { ToolMeta } from "../../lib/tools/types";
 import { toolColor } from "../../lib/tools/colors";
@@ -14,6 +14,7 @@ import { LogoBadge, LogoWordmark } from "../brand/logo";
 import { cn } from "../../lib/utils";
 import { useFavorites, toggleFavorite } from "../../lib/favorites";
 import { useRecents, removeRecent } from "../../lib/recents";
+import { useCommandPalette } from "./command-palette";
 
 export function Sidebar({
   onNavigate,
@@ -23,19 +24,18 @@ export function Sidebar({
   const params = useParams<{ slug?: string }>();
   const activeSlug = params?.slug;
   const { activeCount } = useJobs();
-  const [query, setQuery] = useState("");
+  const { setOpen: openPalette } = useCommandPalette();
   const favorites = useFavorites();
   const recents = useRecents();
 
-  const visible = useMemo(() => searchTools(query), [query]);
-  const visibleByCat = useMemo(() => {
+  const toolsByCat = useMemo(() => {
     const m = new Map<string, ToolMeta[]>();
-    for (const t of visible) {
+    for (const t of TOOLS) {
       if (!m.has(t.category)) m.set(t.category, []);
       m.get(t.category)!.push(t);
     }
     return m;
-  }, [visible]);
+  }, []);
 
   const favTools = useMemo(
     () => favorites.map((s) => TOOLS.find((t) => t.slug === s)).filter((t): t is ToolMeta => t !== undefined),
@@ -48,7 +48,7 @@ export function Sidebar({
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-background">
-      {/* Sticky header: logo + search share one bottom border */}
+      {/* Sticky header */}
       <div className="shrink-0 border-b border-border">
         <Link
           href="/"
@@ -58,62 +58,56 @@ export function Sidebar({
           <LogoBadge size={36} />
           <LogoWordmark />
         </Link>
+
+        {/* Search trigger — opens command palette */}
         <div className="px-2 pb-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜索工具…"
-              className="w-full rounded-md border border-input bg-muted/50 py-1.5 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground transition-colors focus:border-ring focus:bg-background focus:outline-none"
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => openPalette(true)}
+            className="flex w-full items-center gap-2 rounded-md border border-input bg-muted/40 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Search className="h-3.5 w-3.5 shrink-0" />
+            <span className="flex-1 text-left">搜索工具…</span>
+            <kbd className="rounded border border-border bg-background px-1 py-px font-mono text-[10px] leading-none opacity-70">
+              ⌘K
+            </kbd>
+          </button>
         </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-2">
-        {!query && (
-          <>
-            <PinnedSection
-              label="收藏"
-              icon={Star}
-              tools={favTools}
-              activeSlug={activeSlug}
-              favorites={favorites}
-              onNavigate={onNavigate}
-              activeCount={activeCount}
-            />
-            <PinnedSection
-              label="最近使用"
-              icon={Clock}
-              tools={recentTools}
-              activeSlug={activeSlug}
-              favorites={favorites}
-              onNavigate={onNavigate}
-              activeCount={activeCount}
-              showRemove
-            />
-          </>
-        )}
+        <PinnedSection
+          label="收藏"
+          icon={Star}
+          tools={favTools}
+          activeSlug={activeSlug}
+          favorites={favorites}
+          onNavigate={onNavigate}
+          activeCount={activeCount}
+        />
+        <PinnedSection
+          label="最近使用"
+          icon={Clock}
+          tools={recentTools}
+          activeSlug={activeSlug}
+          favorites={favorites}
+          onNavigate={onNavigate}
+          activeCount={activeCount}
+          showRemove
+        />
 
-        {CATEGORIES.filter((c) => visibleByCat.has(c.id)).map((cat) => (
+        {CATEGORIES.filter((c) => toolsByCat.has(c.id)).map((cat) => (
           <CategoryGroup
             key={cat.id}
             label={cat.label}
             icon={cat.icon}
-            tools={visibleByCat.get(cat.id) ?? []}
+            tools={toolsByCat.get(cat.id) ?? []}
             activeSlug={activeSlug}
             favorites={favorites}
-            forceOpen={!!query}
             onNavigate={onNavigate}
             activeCount={activeCount}
           />
         ))}
-        {visible.length === 0 && (
-          <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-            没有匹配的工具
-          </div>
-        )}
       </nav>
     </aside>
   );
@@ -172,7 +166,6 @@ function CategoryGroup({
   tools,
   activeSlug,
   favorites,
-  forceOpen,
   onNavigate,
   activeCount,
 }: {
@@ -181,12 +174,10 @@ function CategoryGroup({
   tools: ToolMeta[];
   activeSlug?: string;
   favorites: string[];
-  forceOpen: boolean;
   onNavigate?: () => void;
   activeCount: number;
 }) {
   const [open, setOpen] = useState(true);
-  const isOpen = forceOpen || open;
 
   return (
     <div className="mt-2 first:mt-0">
@@ -202,21 +193,21 @@ function CategoryGroup({
         <ChevronRight
           className={cn(
             "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ease-out",
-            isOpen && "rotate-90",
+            open && "rotate-90",
           )}
         />
       </button>
 
       <div
         className="grid transition-[grid-template-rows] duration-200 ease-out"
-        style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
-        aria-hidden={!isOpen}
+        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+        aria-hidden={!open}
       >
         <div className="min-h-0 overflow-hidden">
           <div
             className={cn(
               "mt-0.5 transition-opacity duration-200",
-              isOpen ? "opacity-100" : "opacity-0",
+              open ? "opacity-100" : "opacity-0",
             )}
           >
             {tools.map((t, i) => (
