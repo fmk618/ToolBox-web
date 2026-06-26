@@ -13,6 +13,12 @@ import { ConversionBadge } from "../../components/convert/conversion-badge";
 import { JobRow } from "../../components/queue/job-row";
 import { meta } from "./meta";
 
+// 图片格式由「图片格式转换」工具专门处理，文件转换工具中排除
+const IMAGE_FORMATS = new Set([
+  "jpg", "jpeg", "png", "webp", "avif", "gif",
+  "bmp", "tiff", "tif", "svg", "ico", "heic", "heif",
+]);
+
 export default function FileConvertUi() {
   const [routes, setRoutes] = useState<Routes>({});
   const [routesErr, setRoutesErr] = useState<string | null>(null);
@@ -31,9 +37,12 @@ export default function FileConvertUi() {
       );
   }, []);
 
-  const sourceFormats = useMemo(() => Object.keys(routes), [routes]);
+  const sourceFormats = useMemo(
+    () => Object.keys(routes).filter((f) => !IMAGE_FORMATS.has(f)),
+    [routes],
+  );
   const targetFormats = useMemo(
-    () => (src ? reachableFormats(routes, src) : []),
+    () => (src ? reachableFormats(routes, src).filter((f) => !IMAGE_FORMATS.has(f)) : []),
     [routes, src],
   );
 
