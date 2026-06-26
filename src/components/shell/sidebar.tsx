@@ -48,24 +48,26 @@ export function Sidebar({
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-background">
-      <Link
-        href="/"
-        onClick={onNavigate}
-        className="flex items-center gap-2.5 border-b border-border px-5 py-4 transition-colors hover:bg-muted/40"
-      >
-        <LogoBadge size={36} />
-        <LogoWordmark />
-      </Link>
-
-      <div className="px-3 pt-3">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜索工具…"
-            className="w-full rounded-md border border-input bg-muted/50 py-1.5 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground transition-colors focus:border-ring focus:bg-background focus:outline-none"
-          />
+      {/* Sticky header: logo + search share one bottom border */}
+      <div className="shrink-0 border-b border-border">
+        <Link
+          href="/"
+          onClick={onNavigate}
+          className="flex items-center gap-2.5 px-5 py-4 transition-colors hover:bg-muted/40"
+        >
+          <LogoBadge size={36} />
+          <LogoWordmark />
+        </Link>
+        <div className="px-2 pb-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="搜索工具…"
+              className="w-full rounded-md border border-input bg-muted/50 py-1.5 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground transition-colors focus:border-ring focus:bg-background focus:outline-none"
+            />
+          </div>
         </div>
       </div>
 
