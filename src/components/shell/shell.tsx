@@ -36,7 +36,7 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <JobsProvider>
       <CommandPaletteProvider>
-        <div className="flex min-h-screen bg-background text-foreground">
+        <div className="flex h-screen overflow-hidden bg-background text-foreground">
           <div className="hidden lg:flex">
             <Sidebar />
           </div>
