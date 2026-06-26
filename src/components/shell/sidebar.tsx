@@ -8,7 +8,7 @@ import type { LucideIcon } from "lucide-react";
 import { CATEGORIES } from "../../lib/tools/categories";
 import { TOOLS, searchTools } from "../../lib/tools/manifest";
 import { useJobs } from "../../lib/jobs";
-import type { Tool } from "../../lib/tools/types";
+import type { ToolMeta } from "../../lib/tools/types";
 import { toolColor } from "../../lib/tools/colors";
 import { LogoBadge, LogoWordmark } from "../brand/logo";
 import { cn } from "../../lib/utils";
@@ -29,7 +29,7 @@ export function Sidebar({
 
   const visible = useMemo(() => searchTools(query), [query]);
   const visibleByCat = useMemo(() => {
-    const m = new Map<string, Tool[]>();
+    const m = new Map<string, ToolMeta[]>();
     for (const t of visible) {
       if (!m.has(t.category)) m.set(t.category, []);
       m.get(t.category)!.push(t);
@@ -38,11 +38,11 @@ export function Sidebar({
   }, [visible]);
 
   const favTools = useMemo(
-    () => favorites.map((s) => TOOLS.find((t) => t.slug === s)).filter((t): t is Tool => t !== undefined),
+    () => favorites.map((s) => TOOLS.find((t) => t.slug === s)).filter((t): t is ToolMeta => t !== undefined),
     [favorites],
   );
   const recentTools = useMemo(
-    () => recents.map((s) => TOOLS.find((t) => t.slug === s)).filter((t): t is Tool => t !== undefined),
+    () => recents.map((s) => TOOLS.find((t) => t.slug === s)).filter((t): t is ToolMeta => t !== undefined),
     [recents],
   );
 
@@ -130,7 +130,7 @@ function PinnedSection({
 }: {
   label: string;
   icon: LucideIcon;
-  tools: Tool[];
+  tools: ToolMeta[];
   activeSlug?: string;
   favorites: string[];
   onNavigate?: () => void;
@@ -176,7 +176,7 @@ function CategoryGroup({
 }: {
   label: string;
   icon: LucideIcon;
-  tools: Tool[];
+  tools: ToolMeta[];
   activeSlug?: string;
   favorites: string[];
   forceOpen: boolean;
@@ -247,7 +247,7 @@ function ToolItem({
   isFavorite,
   onRemove,
 }: {
-  tool: Tool;
+  tool: ToolMeta;
   active: boolean;
   activeCount: number;
   onNavigate?: () => void;

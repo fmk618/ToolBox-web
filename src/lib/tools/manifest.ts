@@ -34,6 +34,7 @@ import { meta as codeScreenshot } from "../../tools/code-screenshot/meta";
 import { meta as loanCalc } from "../../tools/loan-calc/meta";
 import { meta as dateCalc } from "../../tools/date-calc/meta";
 import { meta as pdfSplit } from "../../tools/pdf-split/meta";
+import { meta as imageInpaint } from "../../tools/image-inpaint/meta";
 
 // 纯静态元数据，不含 dynamic() — 可被 Server Component 安全导入
 export const TOOLS: ToolMeta[] = [
@@ -62,6 +63,7 @@ export const TOOLS: ToolMeta[] = [
   qrcode,
   imageCompress,
   imageConvert,
+  imageInpaint,
   svgMin,
   timestamp,
   timezone,

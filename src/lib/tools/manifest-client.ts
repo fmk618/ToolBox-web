@@ -40,6 +40,7 @@ const UI_LOADERS: Record<string, LazyUi> = {
   "loan-calc": () => import("../../tools/loan-calc/ui"),
   "date-calc": () => import("../../tools/date-calc/ui"),
   "pdf-split": () => import("../../tools/pdf-split/ui"),
+  "image-inpaint": () => import("../../tools/image-inpaint/ui"),
 };
 
 // 带 dynamic() 的完整 Tool 列表 — 仅在 Client Component 中导入
