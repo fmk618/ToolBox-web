@@ -31,6 +31,10 @@ export function pushRecent(slug: string): void {
   write([slug, ...list].slice(0, MAX));
 }
 
+export function removeRecent(slug: string): void {
+  write(read().filter((s) => s !== slug));
+}
+
 export function useRecents(): string[] {
   const [list, setList] = useState<string[]>([]);
   useEffect(() => {

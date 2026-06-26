@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { ChevronRight, Clock, Search, Star } from "lucide-react";
+import { ChevronRight, Clock, Search, Star, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CATEGORIES } from "../../lib/tools/categories";
 import { TOOLS, searchTools } from "../../lib/tools/manifest";
@@ -13,7 +13,7 @@ import { toolColor } from "../../lib/tools/colors";
 import { LogoBadge, LogoWordmark } from "../brand/logo";
 import { cn } from "../../lib/utils";
 import { useFavorites, toggleFavorite } from "../../lib/favorites";
-import { useRecents } from "../../lib/recents";
+import { useRecents, removeRecent } from "../../lib/recents";
 
 export function Sidebar({
   onNavigate,
@@ -89,6 +89,7 @@ export function Sidebar({
               favorites={favorites}
               onNavigate={onNavigate}
               activeCount={activeCount}
+              showRemove
             />
           </>
         )}
@@ -125,6 +126,7 @@ function PinnedSection({
   favorites,
   onNavigate,
   activeCount,
+  showRemove,
 }: {
   label: string;
   icon: LucideIcon;
@@ -133,6 +135,7 @@ function PinnedSection({
   favorites: string[];
   onNavigate?: () => void;
   activeCount: number;
+  showRemove?: boolean;
 }) {
   if (tools.length === 0) return null;
   return (
@@ -152,6 +155,7 @@ function PinnedSection({
             isFirst={i === 0}
             isLast={i === tools.length - 1}
             isFavorite={favorites.includes(t.slug)}
+            onRemove={showRemove ? () => removeRecent(t.slug) : undefined}
           />
         ))}
       </div>
@@ -241,6 +245,7 @@ function ToolItem({
   isFirst,
   isLast,
   isFavorite,
+  onRemove,
 }: {
   tool: Tool;
   active: boolean;
@@ -249,6 +254,7 @@ function ToolItem({
   isFirst: boolean;
   isLast: boolean;
   isFavorite: boolean;
+  onRemove?: () => void;
 }) {
   const color = toolColor(t.slug);
   const TIcon = t.icon;
@@ -320,26 +326,41 @@ function ToolItem({
         )}
       </Link>
 
-      {/* Star / favorite button */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleFavorite(t.slug);
-        }}
-        aria-label={isFavorite ? "取消收藏" : "收藏"}
-        className={cn(
-          "absolute right-1 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded text-muted-foreground transition-opacity",
-          isFavorite
-            ? "opacity-100 text-amber-400"
-            : "opacity-0 group-hover/item:opacity-100 hover:text-foreground",
-        )}
-      >
-        <Star
-          className={cn("h-3 w-3", isFavorite && "fill-amber-400 text-amber-400")}
-        />
-      </button>
+      {/* Action button: X for recents, star for favorites/categories */}
+      {onRemove ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onRemove();
+          }}
+          aria-label="从最近使用中移除"
+          className="absolute right-1 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded text-muted-foreground opacity-0 transition-opacity group-hover/item:opacity-100 hover:text-foreground"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavorite(t.slug);
+          }}
+          aria-label={isFavorite ? "取消收藏" : "收藏"}
+          className={cn(
+            "absolute right-1 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded text-muted-foreground transition-opacity",
+            isFavorite
+              ? "opacity-100 text-amber-400"
+              : "opacity-0 group-hover/item:opacity-100 hover:text-foreground",
+          )}
+        >
+          <Star
+            className={cn("h-3 w-3", isFavorite && "fill-amber-400 text-amber-400")}
+          />
+        </button>
+      )}
     </div>
   );
 }
