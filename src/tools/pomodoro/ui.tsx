@@ -69,6 +69,21 @@ export default function PomodoroUi() {
     return () => clearInterval(id);
   }, [running]);
 
+  // Tab title countdown — restore on pause/unmount
+  useEffect(() => {
+    const original = document.title;
+    return () => { document.title = original; };
+  }, []);
+
+  useEffect(() => {
+    const label = phase === "focus" ? "专注" : phase === "short" ? "短休" : "长休";
+    if (running) {
+      document.title = `${fmt(remaining)} · ${label} | Toolbox`;
+    } else {
+      document.title = "Toolbox";
+    }
+  }, [running, remaining, phase]);
+
   // Phase transition when remaining hits 0
   useEffect(() => {
     if (remaining !== 0 || !running) return;
