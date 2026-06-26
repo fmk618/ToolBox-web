@@ -26,7 +26,8 @@ import { ToolShell } from "../../components/tools/tool-shell";
 import { meta } from "./meta";
 
 const STORAGE_KEY = "toolbox.apiBase";
-const DEFAULT_BASE = "http://127.0.0.1:8000";
+const DEFAULT_BASE = "/api";
+const ADMIN_TOKEN_KEY = "toolbox.adminToken";
 
 type TestState = "idle" | "loading" | "ok" | "fail";
 
@@ -121,6 +122,11 @@ function LLMSection() {
   const [pickedProvider, setPickedProvider] = useState<string>("");
   const [pickedModel, setPickedModel] = useState<string>("");
   const [apiKey, setApiKey] = useState<string>("");
+  const [adminToken, setAdminToken] = useState<string>(() =>
+    typeof window !== "undefined"
+      ? sessionStorage.getItem(ADMIN_TOKEN_KEY) ?? ""
+      : "",
+  );
 
   const [busy, setBusy] = useState<"idle" | "saving" | "testing" | "clearing">(
     "idle",
@@ -155,6 +161,11 @@ function LLMSection() {
 
   const spec = providers.find((p) => p.id === pickedProvider);
 
+  function saveAdminToken(val: string) {
+    setAdminToken(val);
+    sessionStorage.setItem(ADMIN_TOKEN_KEY, val);
+  }
+
   async function handleTest() {
     if (!apiKey.trim()) {
       setFeedback({ kind: "err", text: "请先填入 API Key" });
@@ -163,11 +174,10 @@ function LLMSection() {
     setBusy("testing");
     setFeedback(null);
     try {
-      const r = await testLLMSettings({
-        provider: pickedProvider,
-        model: pickedModel,
-        api_key: apiKey.trim(),
-      });
+      const r = await testLLMSettings(
+        { provider: pickedProvider, model: pickedModel, api_key: apiKey.trim() },
+        adminToken.trim() || undefined,
+      );
       setFeedback({
         kind: r.ok ? "ok" : "err",
         text: r.ok ? `✓ ${r.message}` : `✗ ${r.message}`,
@@ -187,11 +197,10 @@ function LLMSection() {
     setBusy("saving");
     setFeedback(null);
     try {
-      const updated = await saveLLMSettings({
-        provider: pickedProvider,
-        model: pickedModel,
-        api_key: apiKey.trim(),
-      });
+      const updated = await saveLLMSettings(
+        { provider: pickedProvider, model: pickedModel, api_key: apiKey.trim() },
+        adminToken.trim() || undefined,
+      );
       setCurrent(updated);
       setApiKey("");
       setFeedback({ kind: "ok", text: "✓ 已保存，PDF→MD 将走云端 LLM" });
@@ -207,7 +216,7 @@ function LLMSection() {
       return;
     setBusy("clearing");
     try {
-      await clearLLMSettings();
+      await clearLLMSettings(adminToken.trim() || undefined);
       const cur = await fetchLLMSettings();
       setCurrent(cur);
       setApiKey("");
@@ -324,6 +333,23 @@ function LLMSection() {
               {current?.has_key
                 ? `✓ 已保存 Key（${current.key_preview}）· Key 加密存储在服务器本地，不上传第三方 · 留空点保存 = 保留现有 Key · 如需更换，输入新 Key 后保存`
                 : "Key 仅保存在运行 Toolbox 后端的服务器本地，不会上传至任何第三方 · 不配置则 PDF→Markdown 使用本地 Docling，质量较低"}
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400">
+              <KeyRound className="h-3 w-3" /> 管理员令牌
+            </label>
+            <input
+              type="password"
+              value={adminToken}
+              onChange={(e) => saveAdminToken(e.target.value)}
+              placeholder="TOOLBOX_ADMIN_TOKEN 的值（保存/清除/测试时必填）"
+              autoComplete="off"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
+            <p className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+              服务器 .env 中的 TOOLBOX_ADMIN_TOKEN · 本次会话结束前不需重填
             </p>
           </div>
 

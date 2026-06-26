@@ -1,7 +1,7 @@
 export const API_BASE =
   (typeof window !== "undefined" && localStorage.getItem("toolbox.apiBase")) ||
   process.env.NEXT_PUBLIC_API_BASE ||
-  "http://127.0.0.1:8000";
+  "/api";
 
 export type Routes = Record<string, { to: string; engine: string }[]>;
 
@@ -49,10 +49,13 @@ export async function fetchLLMSettings(): Promise<LLMSettingsView> {
 
 export async function saveLLMSettings(
   body: LLMSettingsBody,
+  adminToken?: string,
 ): Promise<LLMSettingsView> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (adminToken) headers["Authorization"] = `Bearer ${adminToken}`;
   const res = await fetch(`${API_BASE}/settings/llm`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -62,17 +65,22 @@ export async function saveLLMSettings(
   return res.json();
 }
 
-export async function clearLLMSettings(): Promise<void> {
-  const res = await fetch(`${API_BASE}/settings/llm`, { method: "DELETE" });
+export async function clearLLMSettings(adminToken?: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (adminToken) headers["Authorization"] = `Bearer ${adminToken}`;
+  const res = await fetch(`${API_BASE}/settings/llm`, { method: "DELETE", headers });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
 
 export async function testLLMSettings(
   body: LLMSettingsBody,
+  adminToken?: string,
 ): Promise<{ ok: boolean; message: string }> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (adminToken) headers["Authorization"] = `Bearer ${adminToken}`;
   const res = await fetch(`${API_BASE}/settings/llm/test`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);

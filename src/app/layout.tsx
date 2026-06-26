@@ -20,7 +20,16 @@ export default function RootLayout({
     <html
       lang="zh-CN"
       className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* Apply saved theme before first paint to avoid flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('toolbox.theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light')document.documentElement.classList.add('light');})();`,
+          }}
+        />
+      </head>
       <body className="min-h-full bg-background font-sans text-foreground">
         <Shell>{children}</Shell>
       </body>
