@@ -4,6 +4,7 @@ import { ArrowRightLeft } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
 import { CopyButton } from "../../components/tools/copy-button";
+import { Select } from "../../components/tools/select";
 import { meta } from "./meta";
 import { CATEGORIES, convert } from "./lib";
 import { cn } from "../../lib/utils";
@@ -71,17 +72,12 @@ export default function UnitConvertUi() {
                 className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-lg dark:text-foreground"
               />
             </ToolField>
-            <select
+            <Select
               value={fromUnit}
-              onChange={(e) => setFromUnit(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-            >
-              {cat.units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.label}
-                </option>
-              ))}
-            </select>
+              onChange={setFromUnit}
+              ariaLabel="源单位"
+              options={cat.units.map((u) => ({ value: u.id, label: u.label }))}
+            />
           </div>
 
           {/* Swap */}
@@ -104,17 +100,12 @@ export default function UnitConvertUi() {
                 className="w-full rounded-md border border-border bg-muted px-3 py-2 font-mono text-lg"
               />
             </ToolField>
-            <select
+            <Select
               value={toUnit}
-              onChange={(e) => setToUnit(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-            >
-              {cat.units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.label}
-                </option>
-              ))}
-            </select>
+              onChange={setToUnit}
+              ariaLabel="目标单位"
+              options={cat.units.map((u) => ({ value: u.id, label: u.label }))}
+            />
           </div>
         </div>
 
