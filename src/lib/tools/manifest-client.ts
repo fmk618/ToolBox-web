@@ -41,6 +41,11 @@ const UI_LOADERS: Record<string, LazyUi> = {
   "date-calc": () => import("../../tools/date-calc/ui"),
   "pdf-split": () => import("../../tools/pdf-split/ui"),
   "image-inpaint": () => import("../../tools/image-inpaint/ui"),
+  md5: () => import("../../tools/md5/ui"),
+  "address-gen": () => import("../../tools/address-gen/ui"),
+  "net-lookup": () => import("../../tools/net-lookup/ui"),
+  drawio: () => import("../../tools/drawio/ui"),
+  "image-to-ico": () => import("../../tools/image-to-ico/ui"),
 };
 
 // 带 dynamic() 的完整 Tool 列表 — 仅在 Client Component 中导入

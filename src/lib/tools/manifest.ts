@@ -35,6 +35,11 @@ import { meta as pensionCalc } from "../../tools/pension-calc/meta";
 import { meta as dateCalc } from "../../tools/date-calc/meta";
 import { meta as pdfSplit } from "../../tools/pdf-split/meta";
 import { meta as imageInpaint } from "../../tools/image-inpaint/meta";
+import { meta as md5 } from "../../tools/md5/meta";
+import { meta as addressGen } from "../../tools/address-gen/meta";
+import { meta as netLookup } from "../../tools/net-lookup/meta";
+import { meta as drawio } from "../../tools/drawio/meta";
+import { meta as imageToIco } from "../../tools/image-to-ico/meta";
 
 // 纯静态元数据，不含 dynamic() — 可被 Server Component 安全导入
 export const TOOLS: ToolMeta[] = [
@@ -50,13 +55,16 @@ export const TOOLS: ToolMeta[] = [
   textStat,
   regexTest,
   hash,
+  md5,
   password,
   jwtDecode,
   calculator,
   unitConvert,
   baseConvert,
   mockData,
+  addressGen,
   codeScreenshot,
+  drawio,
   loanCalc,
   pensionCalc,
   uuid,
@@ -64,12 +72,14 @@ export const TOOLS: ToolMeta[] = [
   imageCompress,
   imageConvert,
   imageInpaint,
+  imageToIco,
   svgMin,
   timestamp,
   timezone,
   dateCalc,
   pomodoro,
   cronParse,
+  netLookup,
   color,
   colorContrast,
   systemSettings,
