@@ -31,6 +31,7 @@ import { meta as mockData } from "../../tools/mock-data/meta";
 import { meta as svgMin } from "../../tools/svg-min/meta";
 import { meta as codeScreenshot } from "../../tools/code-screenshot/meta";
 import { meta as loanCalc } from "../../tools/loan-calc/meta";
+import { meta as pensionCalc } from "../../tools/pension-calc/meta";
 import { meta as dateCalc } from "../../tools/date-calc/meta";
 import { meta as pdfSplit } from "../../tools/pdf-split/meta";
 import { meta as imageInpaint } from "../../tools/image-inpaint/meta";
@@ -57,6 +58,7 @@ export const TOOLS: ToolMeta[] = [
   mockData,
   codeScreenshot,
   loanCalc,
+  pensionCalc,
   uuid,
   qrcode,
   imageCompress,

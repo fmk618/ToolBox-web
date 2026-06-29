@@ -37,6 +37,7 @@ const UI_LOADERS: Record<string, LazyUi> = {
   "svg-min": () => import("../../tools/svg-min/ui"),
   "code-screenshot": () => import("../../tools/code-screenshot/ui"),
   "loan-calc": () => import("../../tools/loan-calc/ui"),
+  "pension-calc": () => import("../../tools/pension-calc/ui"),
   "date-calc": () => import("../../tools/date-calc/ui"),
   "pdf-split": () => import("../../tools/pdf-split/ui"),
   "image-inpaint": () => import("../../tools/image-inpaint/ui"),
