@@ -1,8 +1,10 @@
 "use client";
 
+import { Download, ImageDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
 import { meta } from "./meta";
+import { buildRegexDiagram } from "./diagram";
 
 const EXAMPLES = [
   { label: "邮箱", pattern: "[\\w.+-]+@[\\w-]+\\.[\\w.]+", flags: "g", sample: "联系 alice@example.com 或 bob.test+tag@mail.org" },
@@ -89,6 +91,33 @@ function highlight(input: string, matches: Match[]): React.ReactNode {
   return out;
 }
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function svgToPng(svg: string, width: number, height: number): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const ctx = canvas.getContext("2d")!;
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((b) => resolve(b), "image/png");
+    };
+    img.onerror = () => resolve(null);
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  });
+}
+
 export default function RegexTestUi() {
   const [pattern, setPattern] = useState("\\b(\\w+)@(\\w+\\.\\w+)\\b");
   const [flags, setFlags] = useState("g");
@@ -100,6 +129,18 @@ export default function RegexTestUi() {
     () => runRegex(pattern, flags, input),
     [pattern, flags, input],
   );
+
+  const diagram = useMemo(() => buildRegexDiagram(pattern, flags), [pattern, flags]);
+
+  async function exportPng() {
+    if ("error" in diagram) return;
+    const blob = await svgToPng(diagram.svg, diagram.width, diagram.height);
+    if (blob) downloadBlob(blob, "regex.png");
+  }
+  function exportSvg() {
+    if ("error" in diagram) return;
+    downloadBlob(new Blob([diagram.svg], { type: "image/svg+xml" }), "regex.svg");
+  }
 
   function toggleFlag(f: string) {
     setFlags((cur) => (cur.includes(f) ? cur.replace(f, "") : cur + f));
@@ -158,6 +199,41 @@ export default function RegexTestUi() {
             </button>
           ))}
         </div>
+
+        <ToolField
+          label="结构可视化"
+          action={
+            !("error" in diagram) ? (
+              <div className="flex gap-1.5">
+                <button
+                  onClick={exportPng}
+                  className="flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
+                >
+                  <ImageDown className="h-3.5 w-3.5" /> PNG
+                </button>
+                <button
+                  onClick={exportSvg}
+                  className="flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
+                >
+                  <Download className="h-3.5 w-3.5" /> SVG
+                </button>
+              </div>
+            ) : undefined
+          }
+        >
+          <div className="overflow-auto rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700">
+            {"error" in diagram ? (
+              <div className="px-2 py-8 text-center text-sm text-slate-400">
+                {diagram.error}
+              </div>
+            ) : (
+              <div
+                className="min-w-fit"
+                dangerouslySetInnerHTML={{ __html: diagram.svg }}
+              />
+            )}
+          </div>
+        </ToolField>
 
         <ToolField label="测试字符串">
           <textarea
