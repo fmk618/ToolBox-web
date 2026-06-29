@@ -17,7 +17,6 @@ import { meta as timezone } from "../../tools/timezone/meta";
 import { meta as colorContrast } from "../../tools/color-contrast/meta";
 import { meta as qrcode } from "../../tools/qrcode/meta";
 import { meta as yamlJson } from "../../tools/yaml-json/meta";
-import { meta as markdownPreview } from "../../tools/markdown-preview/meta";
 import { meta as textDiff } from "../../tools/text-diff/meta";
 import { meta as cronParse } from "../../tools/cron-parse/meta";
 import { meta as calculator } from "../../tools/calculator/meta";
@@ -46,7 +45,6 @@ export const TOOLS: ToolMeta[] = [
   htmlEntity,
   jsonFormat,
   yamlJson,
-  markdownPreview,
   textDiff,
   textStat,
   regexTest,

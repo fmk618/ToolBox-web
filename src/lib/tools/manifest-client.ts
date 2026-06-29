@@ -23,7 +23,6 @@ const UI_LOADERS: Record<string, LazyUi> = {
   "color-contrast": () => import("../../tools/color-contrast/ui"),
   qrcode: () => import("../../tools/qrcode/ui"),
   "yaml-json": () => import("../../tools/yaml-json/ui"),
-  "markdown-preview": () => import("../../tools/markdown-preview/ui"),
   "text-diff": () => import("../../tools/text-diff/ui"),
   "cron-parse": () => import("../../tools/cron-parse/ui"),
   calculator: () => import("../../tools/calculator/ui"),
