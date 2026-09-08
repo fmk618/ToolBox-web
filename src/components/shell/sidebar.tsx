@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { ChevronRight, Clock, Search, Star, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CATEGORIES } from "../../lib/tools/categories";
 import { TOOLS, toolsByCategory } from "../../lib/tools/manifest";
 import { useJobs } from "../../lib/jobs";
-import type { ToolMeta } from "../../lib/tools/types";
+import type { CategoryId, ToolMeta } from "../../lib/tools/types";
 import { toolColor } from "../../lib/tools/colors";
 import { LogoBadge, LogoWordmark } from "../brand/logo";
 import { cn } from "../../lib/utils";
@@ -23,6 +23,28 @@ export function Sidebar({
 }) {
   const params = useParams<{ slug?: string }>();
   const activeSlug = params?.slug;
+  const activeCategory = useMemo(
+    () => TOOLS.find((tool) => tool.slug === activeSlug)?.category,
+    [activeSlug],
+  );
+  const [expandedForSlug, setExpandedForSlug] = useState<{
+    slug: string | undefined;
+    category: CategoryId | null;
+  }>(() => ({ slug: activeSlug, category: null }));
+  const extraExpandedCategory =
+    expandedForSlug.slug === activeSlug ? expandedForSlug.category : null;
+
+  function toggleCategory(category: CategoryId) {
+    if (category === activeCategory) return;
+    setExpandedForSlug((current) => {
+      const currentCategory = current.slug === activeSlug ? current.category : null;
+      return {
+        slug: activeSlug,
+        category: currentCategory === category ? null : category,
+      };
+    });
+  }
+
   const { activeCount } = useJobs();
   const { setOpen: openPalette } = useCommandPalette();
   const favorites = useFavorites();
@@ -86,9 +108,12 @@ export function Sidebar({
         {CATEGORIES.filter((c) => toolsByCat.has(c.id)).map((cat) => (
           <CategoryGroup
             key={cat.id}
+            categoryId={cat.id}
             label={cat.label}
             icon={cat.icon}
             tools={toolsByCat.get(cat.id) ?? []}
+            open={cat.id === activeCategory || cat.id === extraExpandedCategory}
+            onToggle={() => toggleCategory(cat.id)}
             activeSlug={activeSlug}
             favorites={favorites}
             onNavigate={onNavigate}
@@ -148,28 +173,37 @@ function PinnedSection({
 
 // ── CategoryGroup ─────────────────────────────────────────────────────────
 function CategoryGroup({
+  categoryId,
   label,
   icon: Icon,
   tools,
+  open,
+  onToggle,
   activeSlug,
   favorites,
   onNavigate,
   activeCount,
 }: {
+  categoryId: CategoryId;
   label: string;
   icon: LucideIcon;
   tools: ToolMeta[];
+  open: boolean;
+  onToggle: () => void;
   activeSlug?: string;
   favorites: string[];
   onNavigate?: () => void;
   activeCount: number;
 }) {
-  const [open, setOpen] = useState(true);
+  const panelId = `${categoryId}-${useId()}`;
 
   return (
     <div className="mt-2 first:mt-0">
       <button
-        onClick={() => setOpen((o) => !o)}
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={panelId}
         className="group flex w-full items-center gap-2 rounded-md px-2 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       >
         <Icon className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
@@ -186,9 +220,11 @@ function CategoryGroup({
       </button>
 
       <div
+        id={panelId}
         className="grid transition-[grid-template-rows] duration-200 ease-out"
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
         aria-hidden={!open}
+        inert={!open}
       >
         <div className="min-h-0 overflow-hidden">
           <div

@@ -2,15 +2,19 @@ import type { LucideIcon } from "lucide-react";
 import type { ComponentType } from "react";
 
 export type CategoryId =
-  | "convert"
+  | "file"
   | "codec"
-  | "crypto"
   | "text"
-  | "dev"
-  | "time"
   | "data"
-  | "web"
+  | "developer"
+  | "security"
+  | "generate"
+  | "calculate"
+  | "time"
   | "image"
+  | "design"
+  | "qrcode"
+  | "network"
   | "system";
 
 export interface ToolMeta {

@@ -4,7 +4,7 @@ import type { ToolMeta } from "../../lib/tools/types";
 export const meta: ToolMeta = {
   slug: "pension-calc",
   name: "养老计算器",
-  category: "dev",
+  category: "calculate",
   icon: CalendarClock,
   description: "中国延迟退休：按出生年月 + 性别 / 岗位推算法定退休年龄与时间",
   keywords: [

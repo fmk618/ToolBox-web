@@ -184,7 +184,7 @@ function CommandPalette() {
                           {list.map((t) => (
                             <PaletteItem
                               key={t.slug}
-                              value={`${t.name} ${t.slug} ${
+                              value={`${cat.label} ${cat.id} ${t.name} ${t.slug} ${
                                 t.description
                               } ${(t.keywords ?? []).join(" ")}`}
                               onSelect={() => go(t.slug)}
