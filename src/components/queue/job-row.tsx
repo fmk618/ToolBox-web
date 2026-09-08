@@ -26,17 +26,17 @@ const STATUS_LABEL: Record<Job["status"], string> = {
 function StatusIcon({ status }: { status: Job["status"] }) {
   switch (status) {
     case "queued":
-      return <Clock className="h-4 w-4 text-slate-400" />;
+      return <Clock className="h-4 w-4 text-muted-foreground" />;
     case "uploading":
-      return <Upload className="h-4 w-4 animate-pulse text-blue-500" />;
+      return <Upload className="h-4 w-4 animate-pulse text-brand" />;
     case "processing":
-      return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+      return <Loader2 className="h-4 w-4 animate-spin text-brand" />;
     case "done":
       return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     case "failed":
-      return <CircleX className="h-4 w-4 text-red-500" />;
+      return <CircleX className="h-4 w-4 text-destructive" />;
     default:
-      return <Clock className="h-4 w-4 text-slate-400" />;
+      return <Clock className="h-4 w-4 text-muted-foreground" />;
   }
 }
 
@@ -58,25 +58,25 @@ export function JobRow({
     : null;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 transition hover:border-slate-300 sm:p-4 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700">
+    <div className="rounded-xl border border-border bg-background p-3 transition hover:border-ring sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <StatusIcon status={job.status} />
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+            <div className="truncate text-sm font-medium text-foreground">
               {job.filename}
             </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1">
                 <span className={src.color}>{src.label}</span>
                 <span>→</span>
                 <span className={dst.color}>{dst.label}</span>
               </span>
-              <span className="text-slate-300">·</span>
+              <span className="text-muted-foreground/50">·</span>
               <span>{(job.size / 1024).toFixed(1)} KB</span>
               {elapsed && (
                 <>
-                  <span className="text-slate-300">·</span>
+                  <span className="text-muted-foreground/50">·</span>
                   <span>{elapsed}</span>
                 </>
               )}
@@ -85,14 +85,14 @@ export function JobRow({
         </div>
 
         <div className="flex shrink-0 items-center justify-end gap-2">
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             {STATUS_LABEL[job.status]}
             {job.status === "uploading" && ` ${job.progress}%`}
           </span>
           {job.status === "done" && (
             <button
               onClick={onDownload}
-              className="inline-flex items-center gap-1 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition hover:bg-green-100 dark:bg-green-950 dark:text-green-300 dark:hover:bg-green-900"
+              className="inline-flex items-center gap-1 rounded-lg bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-700 transition hover:bg-green-500/20 dark:text-green-400"
             >
               <Download className="h-3.5 w-3.5" />
               下载
@@ -101,7 +101,7 @@ export function JobRow({
           {job.status === "failed" && (
             <button
               onClick={onRetry}
-              className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900"
+              className="inline-flex items-center gap-1 rounded-lg bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-500/20 dark:text-amber-300"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               重试
@@ -109,7 +109,7 @@ export function JobRow({
           )}
           <button
             onClick={onRemove}
-            className="grid h-7 w-7 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-accent hover:text-foreground"
             title="移除"
             aria-label="移除"
           >
@@ -127,7 +127,7 @@ export function JobRow({
       )}
 
       {job.error && (
-        <div className="mt-3 break-words rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
+        <div className="mt-3 break-words rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
           {job.error}
         </div>
       )}

@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
+import { TextArea } from "../../components/tools/inputs";
+import { ErrorBox } from "../../components/tools/error-box";
 import { CopyButton } from "../../components/tools/copy-button";
 import { meta } from "./meta";
 
@@ -50,6 +52,12 @@ const EXAMPLE =
 
 export default function JwtDecodeUi() {
   const [input, setInput] = useState(EXAMPLE);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const decoded = useMemo(() => decodeJwt(input), [input]);
   const payload = decoded.payload as Record<string, unknown> | null;
@@ -59,29 +67,27 @@ export default function JwtDecodeUi() {
   const nbf = tsFormat(payload?.nbf);
   const expired =
     typeof payload?.exp === "number" &&
-    (payload.exp as number) * 1000 < Date.now();
+    (payload.exp as number) * 1000 < now;
 
   return (
     <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
         <ToolField label="JWT Token">
-          <textarea
+          <TextArea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             rows={5}
             spellCheck={false}
-            className="w-full resize-y break-all rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-xs dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className="resize-y break-all text-xs"
           />
         </ToolField>
 
         {decoded.err ? (
-          <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-            {decoded.err}
-          </div>
+          <ErrorBox>{decoded.err}</ErrorBox>
         ) : (
           <>
             {expired && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
                 ⚠ Token 已过期（exp = {exp}）
               </div>
             )}
@@ -92,7 +98,7 @@ export default function JwtDecodeUi() {
                 <CopyButton value={JSON.stringify(decoded.header, null, 2)} />
               }
             >
-              <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+              <pre className="overflow-x-auto rounded-lg border border-border bg-muted px-3 py-2 font-mono text-xs text-foreground">
                 {JSON.stringify(decoded.header, null, 2)}
               </pre>
             </ToolField>
@@ -103,14 +109,14 @@ export default function JwtDecodeUi() {
                 <CopyButton value={JSON.stringify(decoded.payload, null, 2)} />
               }
             >
-              <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+              <pre className="overflow-x-auto rounded-lg border border-border bg-muted px-3 py-2 font-mono text-xs text-foreground">
                 {JSON.stringify(decoded.payload, null, 2)}
               </pre>
             </ToolField>
 
             {(iat || nbf || exp) && (
               <ToolField label="时间字段">
-                <div className="space-y-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-950">
+                <div className="space-y-1 rounded-lg border border-border bg-background px-3 py-2 text-xs">
                   {iat && (
                     <Row label="iat 签发于" value={iat} />
                   )}
@@ -121,7 +127,7 @@ export default function JwtDecodeUi() {
                     <Row
                       label="exp 过期于"
                       value={exp}
-                      color={expired ? "text-red-600" : ""}
+                      color={expired ? "text-destructive" : ""}
                     />
                   )}
                 </div>
@@ -129,12 +135,12 @@ export default function JwtDecodeUi() {
             )}
 
             <ToolField label="签名" action={<CopyButton value={decoded.signature} />}>
-              <code className="block break-all rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+              <code className="block break-all rounded-lg border border-border bg-muted px-3 py-2 font-mono text-xs text-foreground">
                 {decoded.signature}
               </code>
             </ToolField>
 
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-muted-foreground">
               本工具仅解码 Header / Payload，不进行签名校验。生产环境请使用 jose 等库做完整 verify。
             </p>
           </>
@@ -155,8 +161,8 @@ function Row({
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-slate-500">{label}</span>
-      <span className={`font-mono ${color || "text-slate-800 dark:text-slate-200"}`}>
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`font-mono ${color || "text-foreground"}`}>
         {value}
       </span>
     </div>

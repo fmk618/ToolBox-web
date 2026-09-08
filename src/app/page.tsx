@@ -3,14 +3,10 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { CATEGORIES } from "../lib/tools/categories";
-import { TOOLS } from "../lib/tools/manifest";
+import { toolsByCategory } from "../lib/tools/manifest";
 
 export default function HomePage() {
-  const grouped = new Map<string, typeof TOOLS>();
-  for (const t of TOOLS) {
-    if (!grouped.has(t.category)) grouped.set(t.category, []);
-    grouped.get(t.category)!.push(t);
-  }
+  const grouped = new Map(toolsByCategory());
 
   return (
     <div className="mx-auto max-w-5xl">

@@ -1,7 +1,7 @@
 "use client";
 
 import { Pause, Play, RotateCcw, SkipForward } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
 import { meta } from "./meta";
 import { cn } from "../../lib/utils";
@@ -47,16 +47,6 @@ export default function PomodoroUi() {
   const phaseDuration = phase === "focus" ? focusMin : phase === "short" ? shortMin : longMin;
   const progress = 1 - remaining / (phaseDuration * 60);
 
-  // When durations change while paused, reset remaining to new phase length
-  const lastDurRef = useRef({ focusMin, shortMin, longMin });
-  useEffect(() => {
-    if (!running) {
-      setRemaining(phaseDuration * 60);
-    }
-    lastDurRef.current = { focusMin, shortMin, longMin };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusMin, shortMin, longMin, phase]);
-
   // Tick once per second when running
   useEffect(() => {
     if (!running) return;
@@ -84,7 +74,7 @@ export default function PomodoroUi() {
     }
   }, [running, remaining, phase]);
 
-  // Phase transition when remaining hits 0
+  // A timer completion is an external event that atomically advances timer state.
   useEffect(() => {
     if (remaining !== 0 || !running) return;
     beep();
@@ -99,13 +89,24 @@ export default function PomodoroUi() {
     }
     if (phase === "focus") {
       const next = cyclesDone + 1;
+      const nextPhase = next % 4 === 0 ? "long" : "short";
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- timer completion transition
       setCyclesDone(next);
-      setPhase(next % 4 === 0 ? "long" : "short");
+      setPhase(nextPhase);
+      setRemaining((nextPhase === "long" ? longMin : shortMin) * 60);
     } else {
       setPhase("focus");
+      setRemaining(focusMin * 60);
     }
     setRunning(false);
-  }, [remaining, running, phase, cyclesDone]);
+  }, [remaining, running, phase, cyclesDone, focusMin, shortMin, longMin]);
+
+  function changeDuration(kind: Phase, minutes: number) {
+    if (kind === "focus") setFocusMin(minutes);
+    else if (kind === "short") setShortMin(minutes);
+    else setLongMin(minutes);
+    if (!running && phase === kind) setRemaining(minutes * 60);
+  }
 
   function start() {
     if ("Notification" in window && Notification.permission === "default") {
@@ -221,7 +222,7 @@ export default function PomodoroUi() {
               max={120}
               value={focusMin}
               onChange={(e) =>
-                setFocusMin(Math.max(1, Math.min(120, parseInt(e.target.value) || 25)))
+                changeDuration("focus", Math.max(1, Math.min(120, parseInt(e.target.value) || 25)))
               }
               disabled={running}
               className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm disabled:opacity-50"
@@ -234,7 +235,7 @@ export default function PomodoroUi() {
               max={60}
               value={shortMin}
               onChange={(e) =>
-                setShortMin(Math.max(1, Math.min(60, parseInt(e.target.value) || 5)))
+                changeDuration("short", Math.max(1, Math.min(60, parseInt(e.target.value) || 5)))
               }
               disabled={running}
               className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm disabled:opacity-50"
@@ -247,7 +248,7 @@ export default function PomodoroUi() {
               max={60}
               value={longMin}
               onChange={(e) =>
-                setLongMin(Math.max(1, Math.min(60, parseInt(e.target.value) || 15)))
+                changeDuration("long", Math.max(1, Math.min(60, parseInt(e.target.value) || 15)))
               }
               disabled={running}
               className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm disabled:opacity-50"

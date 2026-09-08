@@ -12,6 +12,7 @@ import {
 import { useState } from "react";
 import { PDFDocument } from "pdf-lib";
 import { ToolShell } from "../../components/tools/tool-shell";
+import { ErrorBox } from "../../components/tools/error-box";
 import { meta } from "./meta";
 
 type Item = { id: string; file: File; pages?: number };
@@ -119,11 +120,7 @@ export default function PdfMergeUi() {
               </button>
             </div>
 
-            {err && (
-              <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-                {err}
-              </div>
-            )}
+            {err && <ErrorBox>{err}</ErrorBox>}
 
             <ol className="space-y-2">
               {items.map((it, idx) => (

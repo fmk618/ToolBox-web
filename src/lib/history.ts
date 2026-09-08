@@ -1,9 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-const KEY = "toolbox.history";
-const MAX = 50;
+import { createLocalStore } from "./create-local-store";
 
 export type HistoryEntry = {
   srcName: string;
@@ -13,47 +10,16 @@ export type HistoryEntry = {
   at: number;
 };
 
-function read(): HistoryEntry[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as HistoryEntry[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function write(list: HistoryEntry[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAX)));
-    window.dispatchEvent(new CustomEvent("toolbox.history.change"));
-  } catch {
-    /* quota exceeded — silently ignore */
-  }
-}
+const store = createLocalStore<HistoryEntry[]>("toolbox.history", { max: 50 });
 
 export function addHistory(entry: HistoryEntry) {
-  const list = read();
-  list.unshift(entry);
-  write(list);
+  store.write([entry, ...(store.read() ?? [])]);
 }
 
 export function clearHistory() {
-  write([]);
+  store.write([]);
 }
 
 export function useHistory(): HistoryEntry[] {
-  const [list, setList] = useState<HistoryEntry[]>([]);
-  useEffect(() => {
-    setList(read());
-    const handler = () => setList(read());
-    window.addEventListener("toolbox.history.change", handler);
-    window.addEventListener("storage", handler);
-    return () => {
-      window.removeEventListener("toolbox.history.change", handler);
-      window.removeEventListener("storage", handler);
-    };
-  }, []);
-  return list;
+  return store.useValue() ?? [];
 }

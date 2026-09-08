@@ -2,15 +2,15 @@
 
 > Toolbox 项目的浏览器端 ——「工具百宝箱」。
 > 这是 [fmk618/ToolBox](https://github.com/fmk618/ToolBox) 的 `web/` 子模块；
-> 大部分工具纯前端运行，仅文件转换工具依赖 Python 后端。
+> 绝大多数工具纯前端运行，仅文件格式转换 / 图片修复依赖 Python 后端。
 
 ## ✨ 一览
 
-- **30 个工具**，覆盖编解码 / 加密哈希 / 文本 / 时间 / 开发 / 颜色 / 图片 等分类
-- **shadcn/ui 视觉**：Geist 字体 · OKLCH 语义色令牌 · 浅深双模
+- **52 个工具**，覆盖编解码 / 加密哈希 / 文本数据 / 时间 / 开发 / 颜色 / 图片 / 网络等分类
+- **语义色令牌**：OKLCH 设计变量 · 浅深双模 · 统一六件套表单组件
 - **⌘K 命令面板**：全工具搜索 + 键盘导航
 - **侧栏点链导航**：每个工具自带稳定主色，圆点 + 细线串成视觉链
-- **本地优先**：除文件格式转换调用后端外，所有工具完全在浏览器中执行
+- **本地优先**：除文件转换 / 图片修复依赖 Python 后端外，其余工具均在浏览器端处理；需要联网的工具会明确说明发送的数据
 
 ## 🧱 技术栈
 
@@ -25,7 +25,8 @@
 | 类型       | TypeScript                        | 5      |
 | 工具库     | clsx · tailwind-merge             | —      |
 
-工具自身用到的库：`qrcode` · `marked` · `diff` · `js-yaml` · `cronstrue`。
+工具自身用到的库：`qrcode` · `diff` · `js-yaml` · `cronstrue` · `regexp-tree` ·
+`highlight.js` · `html-to-image` · `pdf-lib` · `browser-image-compression`。
 
 ## 🚀 快速开始
 
@@ -35,17 +36,20 @@ npm run dev          # http://localhost:3000
 npm run build && npm run start
 ```
 
-如果要使用「文件格式转换」工具，需要后端先启动（在
+如果要使用「文件格式转换」「图片修复」工具，需要后端先启动（在
 [根仓库](https://github.com/fmk618/ToolBox) 执行 `uv run toolbox serve`）。
-其他 18 个工具不依赖后端，可直接用。
+其余工具不依赖后端，可直接用。
 
 ## ⚙️ 环境变量
 
 | 变量                    | 默认                       | 说明                       |
 | ----------------------- | -------------------------- | -------------------------- |
-| `NEXT_PUBLIC_API_BASE`  | `http://127.0.0.1:8000`    | 文件转换后端 API 地址       |
+| `NEXT_PUBLIC_API_BASE`  | `/api`                     | 后端 API 地址（同源反代时无需配置） |
 
-跨机部署时新建 `web/.env.local` 覆盖：
+优先级：**系统设置页里用户自定义的地址（存 localStorage）> 构建期 `NEXT_PUBLIC_API_BASE` > 同源 `/api`**。
+改设置即时生效，无需刷新。
+
+跨机开发时新建 `web/.env.local` 覆盖：
 
 ```bash
 NEXT_PUBLIC_API_BASE=http://192.168.1.100:8000
@@ -60,20 +64,28 @@ web/
 ├── public/                       # 静态资源（favicon icon.svg / wechat-qr.jpg）
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx            # 根布局 + Geist 字体 + 全局 CSS
+│   │   ├── layout.tsx            # 根布局 + Geist 字体 + 全局标题模板
 │   │   ├── page.tsx              # 首页：按分类网格展示所有工具
 │   │   ├── globals.css           # Tailwind + OKLCH 语义色令牌
 │   │   ├── icon.svg              # 黑底 T 字母 favicon
-│   │   └── tools/[slug]/page.tsx # 动态工具路由
+│   │   └── tools/[slug]/page.tsx # 动态工具路由（SSG + 独立标题/描述）
 │   ├── components/
 │   │   ├── brand/logo.tsx        # T 字母标 + 词标
 │   │   ├── shell/                # sidebar / topbar / command-palette / wechat
-│   │   └── tools/                # 工具间复用的小组件（ToolShell / CopyButton）
+│   │   ├── convert/              # 文件转换专区组件
+│   │   └── tools/                # 全站复用六件套：
+│   │                             #   ToolShell / Button / Segmented / ErrorBox /
+│   │                             #   TextArea+TextField / FileDropZone（另有 CopyButton）
 │   ├── lib/
-│   │   ├── api.ts                # 后端 API 封装（文件转换专用）
-│   │   ├── jobs.tsx              # 转换队列 / 历史
+│   │   ├── api.ts                # 后端 API 封装（getApiBase() 按调用时解析地址）
+│   │   ├── jobs.tsx              # 转换队列（并发 2 · 轮询超时/容错 · 历史记录）
+│   │   ├── tools/                # registry.ts（唯一注册点）/ manifest / categories / colors
+│   │   ├── use-local-state.ts    # localStorage hook（write-through）
+│   │   ├── create-local-store.ts # favorites / recents / history / llm-config 的底层工厂
+│   │   ├── use-debounced-value.ts# 输入防抖
+│   │   ├── download.ts           # blob/dataURL/text 三种下载
 │   │   ├── utils.ts              # cn() 助手（clsx + tailwind-merge）
-│   │   └── tools/                # 工具公共：types / categories / manifest / colors
+│   │   └── format.ts · id.ts     # fmtSize / newId
 │   └── tools/                    # 每个工具一个文件夹（见下文）
 └── package.json
 ```
@@ -89,35 +101,43 @@ src/tools/<slug>/
 └── lib.ts            # 可选：工具特有的纯逻辑
 ```
 
-注册流程：
+注册流程（一步）：
 
 1. 创建文件夹 + 三件套
-2. 在 `src/lib/tools/manifest.ts` 添加一行 meta import 与一行 ui 动态 import
-3. 完成，新工具自动出现在侧栏、首页、命令面板
+2. 在 `src/lib/tools/registry.ts` 的 `TOOL_ENTRIES` 里加一行 `[meta, () => import("./ui")]`
+3. 完成 —— 新工具自动出现在侧栏、首页、命令面板、`/tools/<slug>` 路由，
+   并获得编译期保障（meta 与 loader 永远成对，漏写直接类型报错）
+
+> `meta.slug` 必须与文件夹名一致；纯本地工具给 `ToolShell` 传 `local` 显示「不上传」徽章。
 
 每个工具自动获得：
 
-- 自有稳定主色（slug 哈希到 16 色调色板）
-- 独立 chunk（Next.js `next/dynamic` 懒加载）
+- 自有稳定主色（slug 哈希到 16 色调色板，`lib/tools/colors.ts`）
+- 独立 chunk（`next/dynamic` 懒加载，`ssr: false`）
 - ⌘K 全字段搜索（name / slug / description / keywords）
 
 ## 🔌 与后端的交互
 
-仅「文件格式转换」工具使用后端，URL 命名空间 `/tools/file-convert`：
+「文件格式转换」「图片修复」两个工具使用后端：
 
-| 时机     | 方法   | 路径                              | 用途                                       |
-| -------- | ------ | --------------------------------- | ------------------------------------------ |
-| 工具挂载 | `GET`  | `/tools/file-convert/routes`      | 拉取格式转换图，BFS 计算可达目标            |
-| 用户上传 | `POST` | `/tools/file-convert/convert?to=` | 上传文件，下载转换结果                      |
-| 设置页   | `GET`  | `/settings/llm` `/providers`      | Vision-LLM 配置（PDF→Markdown 走云端模型）  |
+| 时机     | 方法   | 路径                                        | 用途                             |
+| -------- | ------ | ------------------------------------------- | -------------------------------- |
+| 工具挂载 | `GET`  | `/tools/file-convert/routes` `/engines`     | 转换图 BFS 计算可达目标 / 引擎态 |
+| 用户上传 | `POST` | `/tools/file-convert/jobs?to=`              | 建立异步任务，秒回 `job_id`      |
+| 进度轮询 | `GET`  | `/tools/file-convert/jobs/{id}`             | status / progress / error        |
+| 取结果   | `GET`  | `/tools/file-convert/jobs/{id}/result`      | 下载产物（带 Content-Disposition）|
+| 图片修复 | `POST` | `/tools/image-inpaint/remove`               | 原图 + 蒙版 PNG，返回修复图      |
+| LLM 设置 | `POST` | `/settings/llm/test` · `GET /providers`     | 密钥随请求传递，服务端不存储     |
 
-后端在 `https://github.com/fmk618/ToolBox/blob/beta/src/toolbox/api.py` 已放开
-CORS 允许 `http://localhost:3000`。
+队列行为见 `lib/jobs.tsx`：最多并发 2 个任务；轮询 300ms 一次，连续 8 次失败才判失败；
+单任务 10 分钟超时释放并发槽位（防止后端挂死导致队列永久阻塞）。
 
 ## 🎨 设计
 
 - **品牌**：T 字母标（手写 SVG），黑底白字，深色模式自动反相
-- **导航**：分类侧栏 + 工具点状彩色连接（每个工具固定颜色，激活态用自身色渲染文字与发光圆点，无灰色背景污染）
+- **语义令牌**：界面颜色一律用 `bg-background` / `text-muted-foreground` / `border-border`
+  等语义类，不写裸 `slate-*`，深浅色自动成立
+- **导航**：分类侧栏 + 工具点状彩色连接（每个工具固定颜色，激活态用自身色渲染文字与发光圆点）
 - **动画**：路由切换 fade+slide；首页卡片 stagger 入场；命令面板缩放上滑
 - **快捷键**：⌘K / Ctrl+K 全局唤出命令面板
 
@@ -126,8 +146,9 @@ CORS 允许 `http://localhost:3000`。
 | 阶段 | 内容                                                                                           | 状态 |
 | ---- | ---------------------------------------------------------------------------------------------- | ---- |
 | M2   | 26 个工具 · shadcn 视觉 · ⌘K 命令面板 · 图片格式转换 · PDF 合并                               | ✅   |
-| M3   | 进制转换 · 文字统计 · Mock 数据 · SVG 优化（已上线，共 30 个工具）；Carbon 代码截图（计划中） | 🔄   |
-| M4   | 工具收藏 / 最近使用 · 配置同步 · PWA 离线                                                      | 💭   |
+| M3   | 进制转换 · 文字统计 · Mock 数据 · 代码截图 · 单位换算 · 养老/贷款计算器（已上线，共 40 个） | ✅   |
+| M4   | 12 个新工具：数据转换、SQL 格式化、JSON→TS、HTTP/端口速查、二维码解析、EXIF、签名板、图片取色、批量文本、抽奖、汇率、健康计算器（已上线，共 52 个） | ✅   |
+| M5   | 工具收藏 / 最近使用 · 历史记录（已上线）；配置云同步 · PWA 离线                              | 🔄   |
 
 ---
 

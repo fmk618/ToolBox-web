@@ -4,6 +4,8 @@ import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
 import { CopyButton } from "../../components/tools/copy-button";
+import { Button } from "../../components/tools/button";
+import { TextField, TextArea } from "../../components/tools/inputs";
 import { meta } from "./meta";
 
 function generate(count: number): string[] {
@@ -21,7 +23,7 @@ export default function UuidUi() {
       <div className="space-y-4">
         <div className="flex flex-wrap items-end gap-3">
           <ToolField label="数量">
-            <input
+            <TextField
               type="number"
               min={1}
               max={500}
@@ -31,25 +33,22 @@ export default function UuidUi() {
                   Math.max(1, Math.min(500, parseInt(e.target.value) || 1)),
                 )
               }
-              className="w-24 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className="w-24 py-1.5"
             />
           </ToolField>
-          <button
-            onClick={() => setList(generate(count))}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
+          <Button onClick={() => setList(generate(count))}>
             <RefreshCw className="h-4 w-4" /> 重新生成
-          </button>
+          </Button>
         </div>
         <ToolField
           label={`已生成 ${list.length} 个`}
           action={<CopyButton value={joined} />}
         >
-          <textarea
+          <TextArea
             readOnly
             value={joined}
             rows={12}
-            className="w-full resize-y rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="resize-y bg-muted text-xs"
           />
         </ToolField>
       </div>

@@ -1,10 +1,12 @@
 import type { MetadataRoute } from "next";
 
+export const dynamic = "force-static";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Toolbox — 工具百宝箱",
     short_name: "Toolbox",
-    description: "30 个日常小工具，本地优先，开箱即用",
+    description: "52 个日常小工具，本地优先，开箱即用",
     start_url: "/",
     display: "standalone",
     background_color: "#000000",

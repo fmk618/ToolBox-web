@@ -5,7 +5,10 @@ import { Shell } from "../components/shell/shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Toolbox — 工具百宝箱",
+  title: {
+    default: "Toolbox — 工具百宝箱",
+    template: "%s · Toolbox",
+  },
   description: "工具百宝箱 — 常用小工具集合，全部本地运行，按 ⌘K 快速搜索",
 };
 

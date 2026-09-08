@@ -12,48 +12,62 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { fetchProviders, testLLMSettings, type ProviderSpec } from "../../lib/api";
+import {
+  API_BASE_KEY,
+  checkHealth,
+  fetchProviders,
+  testLLMSettings,
+  type ProviderSpec,
+} from "../../lib/api";
 import {
   clearLLMConfig,
   loadLLMConfig,
   saveLLMConfig,
-  type LLMConfig,
 } from "../../lib/llm-config";
 import { clearHistory } from "../../lib/history";
 import { ToolShell } from "../../components/tools/tool-shell";
+import { Button } from "../../components/tools/button";
+import { TextField } from "../../components/tools/inputs";
+import { Select } from "../../components/tools/select";
 import { meta } from "./meta";
 
-const STORAGE_KEY = "toolbox.apiBase";
 const DEFAULT_BASE = "/api";
 const CUSTOM_MODEL = "__custom__";
 
 type TestState = "idle" | "loading" | "ok" | "fail";
 
 export default function SystemSettingsUi() {
-  const [apiBase, setApiBase] = useState("");
+  const [apiBase, setApiBase] = useState(
+    () => typeof window === "undefined" ? DEFAULT_BASE : (localStorage.getItem(API_BASE_KEY) ?? DEFAULT_BASE),
+  );
   const [saved, setSaved] = useState(false);
   const [testing, setTesting] = useState<TestState>("idle");
 
-  useEffect(() => {
-    setApiBase(localStorage.getItem(STORAGE_KEY) ?? DEFAULT_BASE);
-  }, []);
-
   async function testConnection() {
     setTesting("loading");
-    try {
-      const res = await fetch(`${apiBase || DEFAULT_BASE}/health`, { cache: "no-store" });
-      setTesting(res.ok ? "ok" : "fail");
-    } catch {
-      setTesting("fail");
-    }
+    // 输入为空时探测真实生效地址（用户设置 > 构建期 > 同源 /api）
+    const target = apiBase.trim();
+    const ok = target ? await probeHealth(target) : await checkHealth();
+    setTesting(ok ? "ok" : "fail");
     setTimeout(() => setTesting("idle"), 3000);
   }
 
+  async function probeHealth(base: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${base}/health`, { cache: "no-store" });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
   function save() {
-    localStorage.setItem(STORAGE_KEY, apiBase.trim() || DEFAULT_BASE);
+    const v = apiBase.trim();
+    // 清空保存 = 移除覆盖，让构建期 NEXT_PUBLIC_API_BASE / 同源 /api 生效
+    if (v && v !== DEFAULT_BASE) localStorage.setItem(API_BASE_KEY, v);
+    else localStorage.removeItem(API_BASE_KEY);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
-    setTimeout(() => location.reload(), 500);
   }
 
   return (
@@ -62,42 +76,35 @@ export default function SystemSettingsUi() {
         <LLMSection />
 
         <Section title="后端连接" desc="配置 Toolbox HTTP API 地址">
-          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
+          <label className="block text-xs font-medium text-muted-foreground">
             API Base URL
           </label>
           <div className="mt-1 flex flex-col gap-2 sm:flex-row">
-            <input
+            <TextField
               value={apiBase}
               onChange={(e) => setApiBase(e.target.value)}
               placeholder={DEFAULT_BASE}
-              className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              className="flex-1"
             />
-            <button
-              onClick={testConnection}
-              disabled={testing === "loading"}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
+            <Button variant="outline" onClick={testConnection} disabled={testing === "loading"}>
               {testing === "loading" && <Loader2 className="h-4 w-4 animate-spin" />}
               {testing === "ok" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
               {testing === "fail" && <CircleX className="h-4 w-4 text-red-500" />}
               测试连接
-            </button>
+            </Button>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <button
-              onClick={save}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
+            <Button onClick={save}>
               <Save className="h-4 w-4" />
-              保存并刷新
-            </button>
+              保存
+            </Button>
             <button
               onClick={() => setApiBase(DEFAULT_BASE)}
-              className="text-xs text-slate-500 hover:underline"
+              className="text-xs text-muted-foreground hover:underline"
             >
               恢复默认
             </button>
-            {saved && <span className="text-xs text-green-600">✓ 已保存</span>}
+            {saved && <span className="text-xs text-green-700 dark:text-green-400">✓ 已保存</span>}
           </div>
         </Section>
 
@@ -106,7 +113,7 @@ export default function SystemSettingsUi() {
             onClick={() => {
               if (confirm("确认清空全部转换历史？")) clearHistory();
             }}
-            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+            className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive hover:bg-destructive/20"
           >
             清空转换历史
           </button>
@@ -152,14 +159,12 @@ function LLMSection() {
       .finally(() => setLoadingCatalog(false));
   }, []);
 
-  // When provider changes, reset model to default
-  useEffect(() => {
-    const spec = providers.find((p) => p.id === pickedProvider);
-    if (!spec) return;
-    setPickedModel(spec.default_model);
+  function chooseProvider(id: string) {
+    const next = providers.find((provider) => provider.id === id);
+    setPickedProvider(id);
+    setPickedModel(next?.default_model ?? "");
     setCustomModel("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickedProvider]);
+  }
 
   const spec = providers.find((p) => p.id === pickedProvider);
   const effectiveModel = pickedModel === CUSTOM_MODEL ? customModel : pickedModel;
@@ -212,13 +217,13 @@ function LLMSection() {
     <Section
       title={
         <span className="inline-flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-blue-500" /> AI 模型 (Vision LLM)
+          <Sparkles className="h-4 w-4 text-brand" /> AI 模型 (Vision LLM)
         </span>
       }
       desc="配置后 PDF → Markdown 自动走云端视觉大模型，质量最高。不配置则使用本地 Docling。"
     >
       {/* 红色隐私提示 */}
-      <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/60 dark:text-red-300">
+      <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-xs text-destructive">
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
           <span className="font-medium">密钥仅保存在此浏览器中。</span>
@@ -227,13 +232,13 @@ function LLMSection() {
       </div>
 
       {loadingCatalog ? (
-        <div className="rounded-lg bg-slate-50 px-3 py-4 text-center text-sm text-slate-500 dark:bg-slate-900">
+        <div className="rounded-lg bg-muted px-3 py-4 text-center text-sm text-muted-foreground">
           加载中…
         </div>
       ) : (
         <div className="space-y-4">
           {currentConfig && (
-            <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200">
+            <div className="rounded-lg border border-green-600/30 bg-green-500/10 px-3 py-2 text-xs text-green-700 dark:text-green-400">
               <span className="font-medium">已保存：</span>
               {providers.find((p) => p.id === currentConfig.provider)?.label ?? currentConfig.provider} ·{" "}
               <code className="font-mono">{currentConfig.model}</code>
@@ -242,7 +247,7 @@ function LLMSection() {
 
           {/* Provider */}
           <div>
-            <label className="mb-2 block text-xs font-medium text-slate-600 dark:text-slate-400">
+            <label className="mb-2 block text-xs font-medium text-muted-foreground">
               Provider
             </label>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -250,28 +255,28 @@ function LLMSection() {
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => setPickedProvider(p.id)}
+                  onClick={() => chooseProvider(p.id)}
                   className={`rounded-lg border px-3 py-2.5 text-left transition ${
                     pickedProvider === p.id
-                      ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200 dark:bg-blue-950/40 dark:ring-blue-900"
-                      : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900"
+                      ? "border-ring bg-accent ring-2 ring-ring/30"
+                      : "border-border bg-background hover:border-ring"
                   }`}
                 >
-                  <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{p.label}</div>
-                  <div className="mt-0.5 text-[10px] text-slate-400">{p.models.length} 个模型</div>
+                  <div className="text-sm font-medium text-foreground">{p.label}</div>
+                  <div className="mt-0.5 text-[10px] text-muted-foreground">{p.models.length} 个模型</div>
                 </button>
               ))}
             </div>
           </div>
 
           {spec && (
-            <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-400">
+            <div className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
               {spec.description}{" "}
               <a
                 href={spec.api_docs}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 font-medium text-blue-600 hover:underline dark:text-blue-400"
+                className="inline-flex items-center gap-0.5 font-medium text-brand hover:underline"
               >
                 获取 API Key <ExternalLink className="h-3 w-3" />
               </a>
@@ -280,73 +285,65 @@ function LLMSection() {
 
           {/* 模型选择 */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
               模型
             </label>
-            <select
+            <Select
               value={pickedModel}
-              onChange={(e) => {
-                setPickedModel(e.target.value);
-                if (e.target.value !== CUSTOM_MODEL) setCustomModel("");
+              onChange={(v) => {
+                setPickedModel(v);
+                if (v !== CUSTOM_MODEL) setCustomModel("");
               }}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            >
-              {spec?.models.map((m) => (
-                <option key={m} value={m}>
-                  {m}{m === spec.default_model ? " · 推荐" : ""}
-                </option>
-              ))}
-              <option value={CUSTOM_MODEL}>其他（自定义输入）...</option>
-            </select>
+              options={[
+                ...(spec?.models ?? []).map((m) => ({
+                  value: m,
+                  label: m === spec?.default_model ? `${m} · 推荐` : m,
+                })),
+                { value: CUSTOM_MODEL, label: "其他（自定义输入）..." },
+              ]}
+            />
             {pickedModel === CUSTOM_MODEL && (
-              <input
+              <TextField
                 type="text"
                 value={customModel}
                 onChange={(e) => setCustomModel(e.target.value)}
                 placeholder="输入任意模型名，如 gpt-4-turbo"
-                className="mt-2 w-full rounded-lg border border-blue-300 bg-white px-3 py-2 font-mono text-sm dark:border-blue-700 dark:bg-slate-900 dark:text-slate-100"
+                className="mt-2 border-brand/40 font-mono"
                 autoFocus
               />
             )}
-            <p className="mt-1 text-[11px] text-slate-400">厂商新模型可选「自定义输入」，无需等待更新</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">厂商新模型可选「自定义输入」，无需等待更新</p>
           </div>
 
           {/* API Key */}
           <div>
-            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400">
+            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-muted-foreground">
               <KeyRound className="h-3 w-3" /> API Key
             </label>
-            <input
+            <TextField
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="粘贴你的 API Key，如 sk-..."
               autoComplete="off"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              className="font-mono"
             />
           </div>
 
           {/* 操作按钮 */}
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={handleSave}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
+            <Button onClick={handleSave}>
               <Save className="h-4 w-4" />
               {saved ? "✓ 已保存" : "保存到浏览器"}
-            </button>
-            <button
-              onClick={handleTest}
-              disabled={busy !== "idle" || !apiKey.trim()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-            >
+            </Button>
+            <Button variant="outline" onClick={handleTest} disabled={busy !== "idle" || !apiKey.trim()}>
               {busy === "testing" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
               测试连接
-            </button>
+            </Button>
             {currentConfig && (
               <button
                 onClick={handleClear}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive hover:bg-destructive/20"
               >
                 <Trash2 className="h-4 w-4" />
                 清除
@@ -357,8 +354,8 @@ function LLMSection() {
           {feedback && (
             <div className={`rounded-lg px-3 py-2 text-sm ${
               feedback.kind === "ok"
-                ? "border border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200"
-                : "border border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+                ? "border border-green-600/30 bg-green-500/10 text-green-700 dark:text-green-400"
+                : "border border-destructive/30 bg-destructive/10 text-destructive"
             }`}>
               {feedback.text}
             </div>
@@ -379,9 +376,9 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 dark:border-slate-800 dark:bg-slate-950">
-      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
-      {desc && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{desc}</p>}
+    <section className="rounded-2xl border border-border bg-background p-4 sm:p-6">
+      <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      {desc && <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>}
       <div className="mt-4">{children}</div>
     </section>
   );

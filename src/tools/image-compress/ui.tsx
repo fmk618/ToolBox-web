@@ -161,7 +161,7 @@ export default function ImageCompressUi() {
                           <span className="font-medium text-foreground">
                             {fmtSize(it.compressed.size)}
                           </span>
-                          <span className="text-emerald-600 dark:text-emerald-400">
+                          <span className="text-green-700 dark:text-green-400">
                             ↓{" "}
                             {Math.round(
                               (1 - it.compressed.size / it.original.size) * 100,
@@ -171,7 +171,7 @@ export default function ImageCompressUi() {
                         </>
                       )}
                       {it.error && (
-                        <span className="text-red-600">{it.error}</span>
+                        <span className="text-destructive">{it.error}</span>
                       )}
                     </div>
                   </div>

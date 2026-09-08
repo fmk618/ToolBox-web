@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ToolShell } from "../../components/tools/tool-shell";
+import { ErrorBox } from "../../components/tools/error-box";
 import { CopyButton } from "../../components/tools/copy-button";
 import { meta } from "./meta";
 
@@ -13,31 +14,25 @@ const BASES = [
 ];
 
 function parse(input: string, base: number): bigint | null {
-  const s = input.trim().replace(/^(0x|0b|0o)/i, "");
-  if (!s) return null;
-  try {
-    const n = BigInt("0x" + BigInt(base === 16 ? `0x${s}` : `${s}`).toString(16));
-    // validate all chars are valid for this base
-    const valid = "0123456789abcdefghijklmnopqrstuvwxyz".slice(0, base);
-    if (![...s.toLowerCase()].every((c) => valid.includes(c))) return null;
-    return BigInt(parseInt(s, base));
-  } catch {
-    return null;
+  const value = input.trim().replace(/^(0x|0b|0o)/i, "").toLowerCase();
+  if (!value) return null;
+
+  const digits = "0123456789abcdefghijklmnopqrstuvwxyz".slice(0, base);
+  let result = BigInt(0);
+  const radix = BigInt(base);
+  for (const char of value) {
+    const digit = digits.indexOf(char);
+    if (digit < 0) return null;
+    result = result * radix + BigInt(digit);
   }
+  return result;
 }
 
 export default function BaseConvertUi() {
   const [input, setInput] = useState("255");
   const [srcBase, setSrcBase] = useState(10);
 
-  const n = (() => {
-    const s = input.trim().replace(/^(0x|0b|0o)/i, "");
-    if (!s) return null;
-    const valid = "0123456789abcdefghijklmnopqrstuvwxyz".slice(0, srcBase);
-    if (![...s.toLowerCase()].every((c) => valid.includes(c))) return null;
-    const v = parseInt(s, srcBase);
-    return isNaN(v) ? null : v;
-  })();
+  const n = parse(input, srcBase);
 
   return (
     <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
@@ -73,9 +68,9 @@ export default function BaseConvertUi() {
         </div>
 
         {input && n === null && (
-          <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+          <ErrorBox>
             「{input}」不是合法的 {BASES.find((b) => b.base === srcBase)?.label}数
-          </div>
+          </ErrorBox>
         )}
 
         <div className="grid grid-cols-2 gap-3">

@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
+import { TextArea } from "../../components/tools/inputs";
+import { Segmented } from "../../components/tools/segmented";
+import { ErrorBox } from "../../components/tools/error-box";
 import { CopyButton } from "../../components/tools/copy-button";
 import { meta } from "./meta";
 
@@ -31,61 +34,49 @@ export default function JsonFormatUi() {
     <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
       <div className="space-y-4">
         <ToolField label="输入 JSON">
-          <textarea
+          <TextArea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder='{"hello":"world"}'
             rows={8}
-            className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-xs placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className="resize-y text-xs"
             spellCheck={false}
           />
         </ToolField>
 
         {result.err ? (
-          <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-            {result.err}
-          </div>
+          <ErrorBox>{result.err}</ErrorBox>
         ) : (
           <>
             <ToolField
               label="美化输出"
               action={
                 <>
-                  <div className="inline-flex rounded-md border border-slate-200 bg-white text-[11px] dark:border-slate-700 dark:bg-slate-900">
-                    {([2, 4] as const).map((n) => (
-                      <button
-                        key={n}
-                        onClick={() => setIndent(n)}
-                        className={`px-2 py-0.5 ${
-                          indent === n
-                            ? "bg-blue-600 text-white"
-                            : "text-slate-500 dark:text-slate-400"
-                        }`}
-                      >
-                        {n} 空格
-                      </button>
-                    ))}
-                  </div>
+                  <Segmented<"2" | "4">
+                    value={String(indent) as "2" | "4"}
+                    onChange={(v) => setIndent(Number(v) as 2 | 4)}
+                    options={[{ value: "2", label: "2 空格" }, { value: "4", label: "4 空格" }]}
+                  />
                   <CopyButton value={result.pretty} />
                 </>
               }
             >
-              <textarea
+              <TextArea
                 readOnly
                 value={result.pretty}
                 rows={10}
-                className="w-full resize-y rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="resize-y bg-muted text-xs"
               />
             </ToolField>
             <ToolField
               label="压缩"
               action={<CopyButton value={result.minified} />}
             >
-              <textarea
+              <TextArea
                 readOnly
                 value={result.minified}
                 rows={3}
-                className="w-full resize-y rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="resize-y bg-muted text-xs"
               />
             </ToolField>
           </>

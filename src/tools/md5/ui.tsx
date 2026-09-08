@@ -66,10 +66,7 @@ function Encrypt() {
   const [hashes, setHashes] = useState<HashEntry[]>([]);
 
   useEffect(() => {
-    if (!text) {
-      setHashes([]);
-      return;
-    }
+    if (!text) return;
     let cancelled = false;
     allHashes(text, salt).then((h) => {
       if (!cancelled) setHashes(h);
@@ -78,6 +75,8 @@ function Encrypt() {
       cancelled = true;
     };
   }, [text, salt]);
+
+  const visibleHashes = text ? hashes : [];
 
   return (
     <div className="space-y-4">
@@ -100,14 +99,14 @@ function Encrypt() {
         />
       </ToolField>
 
-      {hashes.length > 0 ? (
+      {visibleHashes.length > 0 ? (
         <div className="overflow-hidden rounded-xl border border-border bg-card">
-          {hashes.map((h, i) => (
+          {visibleHashes.map((h, i) => (
             <div
               key={h.label}
               className={
                 "flex items-center gap-3 px-3 py-2.5" +
-                (i === hashes.length - 1 ? "" : " border-b border-border/50")
+                (i === visibleHashes.length - 1 ? "" : " border-b border-border/50")
               }
             >
               <span className="w-40 shrink-0 text-xs text-muted-foreground">

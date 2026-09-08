@@ -9,9 +9,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { submitJob, pollJob, downloadJobResult } from "./api";
+import { submitJob, pollJob, downloadJobResult, type JobStatusResponse } from "./api";
 import { loadLLMConfig } from "./llm-config";
 import { addHistory } from "./history";
+import { newId } from "./id";
+import { downloadDataUrl } from "./download";
 
 export type JobStatus =
   | "queued"
@@ -54,11 +56,32 @@ type JobsCtx = {
 const Ctx = createContext<JobsCtx | null>(null);
 
 const MAX_PARALLEL = 2;
+const POLL_INTERVAL_MS = 300;
+/** 连续轮询失败容忍次数 —— 超过才判定任务失败（网络抖动/后端瞬时 5xx 不立即杀任务）。 */
+const POLL_MAX_ERRORS = 8;
+/** 单任务总时长上限：后端挂死时释放并发槽位，避免队列永久阻塞。 */
+const JOB_TIMEOUT_MS = 10 * 60_000;
+
+function sleep(ms: number) {
+  return new Promise<void>((r) => setTimeout(r, ms));
+}
 
 export function JobsProvider({ children }: { children: ReactNode }) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const jobsRef = useRef<Job[]>([]);
   jobsRef.current = jobs;
+
+  // pump 单飞标记：同一时刻最多一个"待启动"的 pump 定时器，
+  // 防止 enqueue/retry/finally 三处同时触发导致 pump 叠加空转。
+  const pumpScheduled = useRef(false);
+  const schedulePump = useCallback(() => {
+    if (pumpScheduled.current) return;
+    pumpScheduled.current = true;
+    setTimeout(() => {
+      pumpScheduled.current = false;
+      void pumpRef.current();
+    }, 0);
+  }, []);
 
   const setJob = useCallback((id: string, patch: Partial<Job>) => {
     setJobs((cur) => cur.map((j) => (j.id === id ? { ...j, ...patch } : j)));
@@ -86,11 +109,25 @@ export function JobsProvider({ children }: { children: ReactNode }) {
       setJob(next.id, { status: "processing", progress: 0 });
       const fallback = `${next.filename.replace(/\.[^.]+$/, "")}.${next.dstFmt}`;
       let resultFilename = fallback;
+      const deadline = Date.now() + JOB_TIMEOUT_MS;
+      let pollErrors = 0;
 
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        await new Promise<void>((r) => setTimeout(r, 300));
-        const status = await pollJob(job_id);
+      for (;;) {
+        await sleep(POLL_INTERVAL_MS);
+        if (Date.now() > deadline) {
+          throw new Error("转换超时：后端长时间未完成，请减小文件后重试");
+        }
+        let status: JobStatusResponse;
+        try {
+          status = await pollJob(job_id);
+          pollErrors = 0;
+        } catch {
+          pollErrors += 1;
+          if (pollErrors >= POLL_MAX_ERRORS) {
+            throw new Error("轮询转换进度失败（网络不稳定或后端不可用）");
+          }
+          continue;
+        }
 
         if (status.status === "done") {
           resultFilename = status.filename ?? fallback;
@@ -126,16 +163,17 @@ export function JobsProvider({ children }: { children: ReactNode }) {
         finishedAt: Date.now(),
       });
     } finally {
-      // Schedule next pump tick.
-      setTimeout(() => void pump(), 0);
+      schedulePump();
     }
-  }, [setJob]);
+  }, [setJob, schedulePump]);
+  // pump 经 ref 间接递归（schedulePump 触发下一轮），避免 useCallback 依赖自身。
+  const pumpRef = useRef(pump);
+  pumpRef.current = pump;
 
   const enqueue = useCallback<JobsCtx["enqueue"]>(
     ({ file, srcFmt, dstFmt }) => {
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const job: Job = {
-        id,
+        id: newId(),
         file,
         filename: file.name,
         size: file.size,
@@ -146,9 +184,9 @@ export function JobsProvider({ children }: { children: ReactNode }) {
         startedAt: Date.now(),
       };
       setJobs((cur) => [...cur, job]);
-      setTimeout(() => void pump(), 0);
+      schedulePump();
     },
-    [pump],
+    [schedulePump],
   );
 
   const remove = useCallback((id: string) => {
@@ -176,18 +214,16 @@ export function JobsProvider({ children }: { children: ReactNode }) {
   const retry = useCallback(
     (id: string) => {
       setJob(id, { status: "queued", error: undefined, progress: 0 });
-      setTimeout(() => void pump(), 0);
+      schedulePump();
     },
-    [pump, setJob],
+    [schedulePump, setJob],
   );
 
   const downloadResult = useCallback((id: string) => {
     const job = jobsRef.current.find((j) => j.id === id);
     if (!job?.resultBlobUrl || !job.resultName) return;
-    const a = document.createElement("a");
-    a.href = job.resultBlobUrl;
-    a.download = job.resultName;
-    a.click();
+    // blob URL 由 Job 持有（remove/clearFinished 时统一 revoke），这里不重复 revoke
+    downloadDataUrl(job.resultBlobUrl, job.resultName);
   }, []);
 
   const activeCount = useMemo(

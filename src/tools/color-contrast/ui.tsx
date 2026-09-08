@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
+import { ErrorBox } from "../../components/tools/error-box";
 import { meta } from "./meta";
 import { hexToRgb } from "../color/lib";
 
@@ -48,12 +49,12 @@ export default function ColorContrastUi() {
                 type="color"
                 value={fg}
                 onChange={(e) => setFg(e.target.value)}
-                className="h-9 w-12 cursor-pointer rounded border border-slate-200 dark:border-slate-700"
+                className="h-9 w-12 cursor-pointer rounded border border-border"
               />
               <input
                 value={fg}
                 onChange={(e) => setFg(e.target.value)}
-                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground"
               />
             </div>
           </ToolField>
@@ -63,19 +64,19 @@ export default function ColorContrastUi() {
                 type="color"
                 value={bg}
                 onChange={(e) => setBg(e.target.value)}
-                className="h-9 w-12 cursor-pointer rounded border border-slate-200 dark:border-slate-700"
+                className="h-9 w-12 cursor-pointer rounded border border-border"
               />
               <input
                 value={bg}
                 onChange={(e) => setBg(e.target.value)}
-                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground"
               />
             </div>
           </ToolField>
         </div>
 
         <div
-          className="rounded-xl border border-slate-200 px-4 py-6 dark:border-slate-700"
+          className="rounded-xl border border-border px-4 py-6"
           style={{ background: bg, color: fg }}
         >
           <div className="text-3xl font-semibold">敏捷的棕色狐狸跳过懒狗</div>
@@ -89,9 +90,9 @@ export default function ColorContrastUi() {
 
         {result ? (
           <div className="space-y-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-4 text-center dark:border-slate-800 dark:bg-slate-950">
-              <div className="text-xs text-slate-500">对比度</div>
-              <div className="mt-1 text-4xl font-bold text-slate-900 dark:text-slate-50">
+            <div className="rounded-xl border border-border bg-background p-4 text-center">
+              <div className="text-xs text-muted-foreground">对比度</div>
+              <div className="mt-1 text-4xl font-bold text-foreground">
                 {result.ratio} : 1
               </div>
             </div>
@@ -104,9 +105,7 @@ export default function ColorContrastUi() {
             </div>
           </div>
         ) : (
-          <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-            请输入合法的 Hex 颜色
-          </div>
+          <ErrorBox>请输入合法的 Hex 颜色</ErrorBox>
         )}
       </div>
     </ToolShell>
@@ -118,8 +117,8 @@ function Row({ label, pass }: { label: string; pass: boolean }) {
     <div
       className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
         pass
-          ? "border-green-300 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200"
-          : "border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+          ? "border-green-600/30 bg-green-500/10 text-green-700 dark:text-green-400"
+          : "border-destructive/30 bg-destructive/10 text-destructive"
       }`}
     >
       <span>{label}</span>

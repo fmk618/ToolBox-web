@@ -10,8 +10,10 @@ import {
   Upload,
 } from "lucide-react";
 import { ToolShell } from "../../components/tools/tool-shell";
+import { Button } from "../../components/tools/button";
+import { ErrorBox } from "../../components/tools/error-box";
 import { cn } from "../../lib/utils";
-import { API_BASE } from "../../lib/api";
+import { postFormForBlob } from "../../lib/api";
 import { meta } from "./meta";
 
 const MAX_DIM = 1200;
@@ -22,7 +24,6 @@ function fitDimensions(w: number, h: number): [number, number] {
 }
 
 export default function ImageInpaintUi() {
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [canvasSize, setCanvasSize] = useState<[number, number] | null>(null);
   const [brushSize, setBrushSize] = useState(24);
   const [erasing, setErasing] = useState(false);
@@ -46,7 +47,6 @@ export default function ImageInpaintUi() {
       imgRef.current = img;
       const [w, h] = fitDimensions(img.naturalWidth, img.naturalHeight);
       setCanvasSize([w, h]);
-      setImageFile(file);
       setResultUrl(null);
       setHasMask(false);
       setError(null);
@@ -209,17 +209,7 @@ export default function ImageInpaintUi() {
       fd.append("file", imgBlob, "image.png");
       fd.append("mask", maskBlob, "mask.png");
 
-      const res = await fetch(`${API_BASE}/tools/image-inpaint/remove`, {
-        method: "POST",
-        body: fd,
-      });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status}${text ? `: ${text}` : ""}`);
-      }
-
-      const blob = await res.blob();
+      const blob = await postFormForBlob("/tools/image-inpaint/remove", fd);
       if (resultUrl) URL.revokeObjectURL(resultUrl);
       setResultUrl(URL.createObjectURL(blob));
     } catch (e) {
@@ -246,15 +236,15 @@ export default function ImageInpaintUi() {
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
             className={cn(
-              "flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed px-6 py-12 text-slate-500 transition",
+              "flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed px-6 py-12 text-muted-foreground transition",
               dragging
-                ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
-                : "border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900",
+                ? "border-ring bg-accent"
+                : "border-border bg-muted/30 hover:border-ring hover:bg-accent",
             )}
           >
             <Upload className="h-8 w-8" />
             <span className="text-sm font-medium">点击或拖拽上传图片</span>
-            <span className="text-xs text-slate-400">支持 PNG / JPEG / WebP / BMP · 自动缩放到 1200px</span>
+            <span className="text-xs text-muted-foreground">支持 PNG / JPEG / WebP / BMP · 自动缩放到 1200px</span>
             <input
               type="file"
               accept="image/*"
@@ -274,8 +264,8 @@ export default function ImageInpaintUi() {
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition",
                   !erasing
-                    ? "border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:ring-blue-800"
-                    : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400",
+                    ? "border-ring bg-accent text-foreground ring-1"
+                    : "border-border text-muted-foreground hover:bg-accent",
                 )}
               >
                 <Paintbrush className="h-3.5 w-3.5" />
@@ -287,8 +277,8 @@ export default function ImageInpaintUi() {
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition",
                   erasing
-                    ? "border-amber-500 bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-800"
-                    : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400",
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-1"
+                    : "border-border text-muted-foreground hover:bg-accent",
                 )}
               >
                 <Eraser className="h-3.5 w-3.5" />
@@ -296,7 +286,7 @@ export default function ImageInpaintUi() {
               </button>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 dark:text-slate-400">笔刷</span>
+                <span className="text-xs text-muted-foreground">笔刷</span>
                 <input
                   type="range"
                   min={4}
@@ -305,32 +295,32 @@ export default function ImageInpaintUi() {
                   onChange={(e) => setBrushSize(Number(e.target.value))}
                   className="w-24"
                 />
-                <span className="w-6 text-xs tabular-nums text-slate-500 dark:text-slate-400">{brushSize}</span>
+                <span className="w-6 text-xs tabular-nums text-muted-foreground">{brushSize}</span>
               </div>
 
               <button
                 onClick={clearMask}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:bg-accent"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 清除标记
               </button>
 
               <button
-                onClick={() => { setCanvasSize(null); setImageFile(null); setResultUrl(null); setHasMask(false); }}
-                className="ml-auto text-xs text-slate-400 hover:underline"
+                onClick={() => { setCanvasSize(null); setResultUrl(null); setHasMask(false); }}
+                className="ml-auto text-xs text-muted-foreground hover:underline"
               >
                 重新上传
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-muted-foreground">
               在图片上用<span className="mx-0.5 font-medium text-red-500">涂抹</span>工具圈出要去除的区域，支持水印、文字、Logo 等，然后点击「去除并修复」
             </p>
 
             {/* Canvas */}
             <div
-              className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700"
+              className="relative overflow-hidden rounded-xl border border-border"
               style={{ cursor: erasing ? "cell" : "crosshair" }}
             >
               <canvas
@@ -346,32 +336,32 @@ export default function ImageInpaintUi() {
             </div>
 
             {/* Submit */}
-            <button
+            <Button
+              size="md"
               onClick={submit}
               disabled={processing || !hasMask}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-full"
             >
               {processing && <Loader2 className="h-4 w-4 animate-spin" />}
               {processing ? "修复中…" : hasMask ? "去除并修复" : "请先涂抹要去除的区域"}
-            </button>
+            </Button>
 
             {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-                {error}
-              </div>
+              <ErrorBox>{error}</ErrorBox>
             )}
 
             {/* Result */}
             {resultUrl && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">修复结果</p>
-                <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+                <p className="text-xs font-medium text-muted-foreground">修复结果</p>
+                <div className="overflow-hidden rounded-xl border border-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- result is a local blob URL */}
                   <img src={resultUrl} className="block w-full" alt="修复结果" />
                 </div>
                 <a
                   href={resultUrl}
                   download="inpainted.png"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-green-500 bg-green-50 py-2.5 text-sm font-medium text-green-700 transition hover:bg-green-100 dark:border-green-800 dark:bg-green-950 dark:text-green-300 dark:hover:bg-green-900"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-green-600/30 bg-green-500/10 py-2.5 text-sm font-medium text-green-700 transition hover:bg-green-500/20 dark:text-green-400"
                 >
                   <Download className="h-4 w-4" />
                   下载 PNG

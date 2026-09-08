@@ -3,6 +3,8 @@
 import { Download, ImageDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
+import { ErrorBox } from "../../components/tools/error-box";
+import { TextArea } from "../../components/tools/inputs";
 import { meta } from "./meta";
 import { buildRegexDiagram } from "./diagram";
 
@@ -80,7 +82,7 @@ function highlight(input: string, matches: Match[]): React.ReactNode {
     out.push(
       <mark
         key={i}
-        className="rounded bg-yellow-200 px-0.5 text-slate-900 dark:bg-yellow-500/40 dark:text-yellow-100"
+        className="rounded bg-yellow-200 px-0.5 text-foreground dark:bg-yellow-500/40 dark:text-yellow-100"
       >
         {input.slice(m.index, m.index + m.length)}
       </mark>,
@@ -156,13 +158,13 @@ export default function RegexTestUi() {
     <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
         <div>
-          <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">常用示例 — 点击快速加载</p>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">常用示例 — 点击快速加载</p>
           <div className="flex flex-wrap gap-1.5">
             {EXAMPLES.map((ex) => (
               <button
                 key={ex.label}
                 onClick={() => loadExample(ex)}
-                className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
+                className="rounded-md border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground transition hover:border-ring hover:bg-accent hover:text-brand"
               >
                 {ex.label}
               </button>
@@ -171,16 +173,16 @@ export default function RegexTestUi() {
         </div>
 
         <ToolField label="正则表达式" hint={`/${pattern}/${flags}`}>
-          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 dark:border-slate-700 dark:bg-slate-950">
-            <span className="font-mono text-sm text-slate-400">/</span>
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-background px-2 py-1.5">
+            <span className="font-mono text-sm text-muted-foreground">/</span>
             <input
               value={pattern}
               onChange={(e) => setPattern(e.target.value)}
-              className="flex-1 bg-transparent font-mono text-sm text-slate-900 focus:outline-none dark:text-slate-100"
+              className="flex-1 bg-transparent font-mono text-sm text-foreground focus:outline-none"
               placeholder="\d+"
               spellCheck={false}
             />
-            <span className="font-mono text-sm text-slate-400">/{flags}</span>
+            <span className="font-mono text-sm text-muted-foreground">/{flags}</span>
           </div>
         </ToolField>
 
@@ -191,8 +193,8 @@ export default function RegexTestUi() {
               onClick={() => toggleFlag(f)}
               className={`rounded-md border px-2 py-1 text-xs transition ${
                 flags.includes(f)
-                  ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                  : "border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-900"
+                  ? "border-ring bg-accent text-foreground"
+                  : "border-border text-muted-foreground hover:bg-accent"
               }`}
             >
               {label}
@@ -207,13 +209,13 @@ export default function RegexTestUi() {
               <div className="flex gap-1.5">
                 <button
                   onClick={exportPng}
-                  className="flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
+                  className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition hover:bg-accent"
                 >
                   <ImageDown className="h-3.5 w-3.5" /> PNG
                 </button>
                 <button
                   onClick={exportSvg}
-                  className="flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
+                  className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition hover:bg-accent"
                 >
                   <Download className="h-3.5 w-3.5" /> SVG
                 </button>
@@ -221,9 +223,9 @@ export default function RegexTestUi() {
             ) : undefined
           }
         >
-          <div className="overflow-auto rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700">
+          <div className="overflow-auto rounded-lg border border-border bg-background p-3">
             {"error" in diagram ? (
-              <div className="px-2 py-8 text-center text-sm text-slate-400">
+              <div className="px-2 py-8 text-center text-sm text-muted-foreground">
                 {diagram.error}
               </div>
             ) : (
@@ -236,23 +238,21 @@ export default function RegexTestUi() {
         </ToolField>
 
         <ToolField label="测试字符串">
-          <textarea
+          <TextArea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             rows={6}
-            className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className="resize-y"
             spellCheck={false}
           />
         </ToolField>
 
         {err ? (
-          <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-            {err}
-          </div>
+          <ErrorBox>{err}</ErrorBox>
         ) : (
           <>
             <ToolField label={`匹配预览（${matches.length} 个）`}>
-              <div className="whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm leading-6 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+              <div className="whitespace-pre-wrap rounded-lg border border-border bg-muted px-3 py-2 font-mono text-sm leading-6 text-foreground">
                 {highlight(input, matches)}
               </div>
             </ToolField>
@@ -262,23 +262,23 @@ export default function RegexTestUi() {
                   {matches.slice(0, 50).map((m, i) => (
                     <div
                       key={i}
-                      className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-950"
+                      className="rounded-md border border-border bg-background px-3 py-2 text-xs"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-slate-400">#{i}</span>
-                        <span className="font-mono text-slate-900 dark:text-slate-100">
+                        <span className="font-mono text-muted-foreground">#{i}</span>
+                        <span className="font-mono text-foreground">
                           {m.text}
                         </span>
-                        <span className="ml-auto text-slate-400">
+                        <span className="ml-auto text-muted-foreground">
                           [{m.index}, {m.index + m.length})
                         </span>
                       </div>
                       {m.groups.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1 text-[11px] text-slate-500">
+                        <div className="mt-1 flex flex-wrap gap-1 text-[11px] text-muted-foreground">
                           {m.groups.map((g, gi) => (
                             <span
                               key={gi}
-                              className="rounded bg-slate-100 px-1.5 py-0.5 font-mono dark:bg-slate-800"
+                              className="rounded bg-muted px-1.5 py-0.5 font-mono"
                             >
                               ${gi + 1}: {g}
                             </span>
@@ -288,7 +288,7 @@ export default function RegexTestUi() {
                     </div>
                   ))}
                   {matches.length > 50 && (
-                    <div className="text-center text-xs text-slate-400">
+                    <div className="text-center text-xs text-muted-foreground">
                       （仅展示前 50 个，共 {matches.length} 个）
                     </div>
                   )}

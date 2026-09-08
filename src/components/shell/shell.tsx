@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
@@ -8,21 +8,23 @@ import { CommandPaletteProvider } from "./command-palette";
 import { JobsProvider } from "../../lib/jobs";
 import { usePathname } from "next/navigation";
 
+function subscribeOnline(callback: () => void) {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+}
+
+function isOffline() {
+  return !navigator.onLine;
+}
+
 export function Shell({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [offline, setOffline] = useState(false);
+  const offline = useSyncExternalStore(subscribeOnline, isOffline, () => false);
   const pathname = usePathname();
-
-  useEffect(() => {
-    const h = () => setOffline(!navigator.onLine);
-    window.addEventListener("online", h);
-    window.addEventListener("offline", h);
-    setOffline(!navigator.onLine);
-    return () => {
-      window.removeEventListener("online", h);
-      window.removeEventListener("offline", h);
-    };
-  }, []);
 
   useEffect(() => {
     if (mobileMenuOpen) {

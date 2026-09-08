@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download, Loader2, Upload, X } from "lucide-react";
 import { ToolShell } from "../../components/tools/tool-shell";
+import { ErrorBox } from "../../components/tools/error-box";
 import { convertFile } from "../../lib/api";
 import { meta } from "./meta";
 
@@ -176,9 +177,7 @@ export default function ImageConvertUi() {
 
         {/* Error */}
         {status === "error" && error && (
-          <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-            {error}
-          </div>
+          <ErrorBox>{error}</ErrorBox>
         )}
 
         {/* Result */}

@@ -7,7 +7,7 @@ import { Command } from "cmdk";
 import { Clock, Search, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CATEGORIES, categoryById } from "../../lib/tools/categories";
-import { TOOLS } from "../../lib/tools/manifest";
+import { TOOLS, toolsByCategory } from "../../lib/tools/manifest";
 import { useRecents } from "../../lib/recents";
 import { cn } from "../../lib/utils";
 import type { Tool } from "../../lib/tools/types";
@@ -75,14 +75,10 @@ function CommandPalette() {
   }
 
   // Group tools by category for the palette body.
-  const grouped = React.useMemo(() => {
-    const map = new Map<string, typeof TOOLS>();
-    for (const t of TOOLS) {
-      if (!map.has(t.category)) map.set(t.category, []);
-      map.get(t.category)!.push(t);
-    }
-    return map;
-  }, []);
+  const grouped = React.useMemo(
+    () => new Map(toolsByCategory()),
+    [],
+  );
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>

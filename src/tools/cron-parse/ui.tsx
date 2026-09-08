@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import cronstrue from "cronstrue/i18n";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
+import { TextField } from "../../components/tools/inputs";
+import { Button } from "../../components/tools/button";
 import { meta } from "./meta";
 
 const PRESETS: { label: string; expr: string }[] = [
@@ -101,32 +103,33 @@ export default function CronParseUi() {
     <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
       <div className="space-y-4">
         <ToolField label="Cron 表达式（5 字段：分 时 日 月 周）">
-          <input
+          <TextField
             value={expr}
             onChange={(e) => setExpr(e.target.value)}
             placeholder="0 9 * * 1-5"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-base dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className="font-mono text-base"
             spellCheck={false}
           />
         </ToolField>
 
         <div className="flex flex-wrap gap-1.5">
           {PRESETS.map((p) => (
-            <button
+            <Button
               key={p.label}
+              variant="outline"
+              size="sm"
               onClick={() => setExpr(p.expr)}
-              className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
             >
               {p.label}
-            </button>
+            </Button>
           ))}
         </div>
 
         <div
           className={`rounded-xl border px-4 py-3 ${
             isValid
-              ? "border-green-200 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950 dark:text-green-100"
-              : "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+              ? "border-green-600/30 bg-green-500/10 text-green-700 dark:text-green-400"
+              : "border-destructive/30 bg-destructive/10 text-destructive"
           }`}
         >
           <div className="text-xs font-medium opacity-80">含义</div>
@@ -135,14 +138,14 @@ export default function CronParseUi() {
 
         {firings && firings.length > 0 && (
           <ToolField label="接下来 5 次触发">
-            <div className="space-y-1 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
+            <div className="space-y-1 rounded-lg border border-border bg-background px-3 py-2">
               {firings.map((d, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between border-b border-slate-100 py-1.5 text-xs last:border-0 dark:border-slate-800"
+                  className="flex items-center justify-between border-b border-border py-1.5 text-xs last:border-0"
                 >
-                  <span className="text-slate-400">#{i + 1}</span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">
+                  <span className="text-muted-foreground">#{i + 1}</span>
+                  <span className="font-mono text-foreground">
                     {d.toLocaleString()}
                   </span>
                 </div>

@@ -3,6 +3,8 @@
 import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
+import { Button } from "../../components/tools/button";
+import { TextField } from "../../components/tools/inputs";
 import { CopyButton } from "../../components/tools/copy-button";
 import { meta } from "./meta";
 import {
@@ -56,31 +58,28 @@ export default function PasswordUi() {
       <div className="space-y-4">
         <ToolField label="生成结果" action={<CopyButton value={password} />}>
           <div className="flex items-stretch gap-2">
-            <input
+            <TextField
               readOnly
               value={password}
-              className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-base tracking-wider dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              className="flex-1 bg-muted font-mono text-base tracking-wider"
             />
-            <button
-              onClick={() => setSeed((s) => s + 1)}
-              className="inline-flex items-center justify-center gap-1 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700"
-            >
+            <Button onClick={() => setSeed((s) => s + 1)}>
               <RefreshCw className="h-4 w-4" />
               换一个
-            </button>
+            </Button>
           </div>
         </ToolField>
 
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+            <span className="text-xs font-medium text-muted-foreground">
               强度
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted-foreground">
               约 {bits} bit · {strength.label}
             </span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
             <div
               className={`${strength.color} h-full transition-all`}
               style={{ width: `${Math.min(100, (bits / 140) * 100)}%` }}
@@ -109,8 +108,8 @@ export default function PasswordUi() {
                   onClick={() => toggleSet(id)}
                   className={`rounded-md border px-2.5 py-1 text-xs ${
                     on
-                      ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                      : "border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400"
+                      ? "border-ring bg-accent text-foreground"
+                      : "border-border text-muted-foreground hover:bg-accent"
                   }`}
                 >
                   {label}
@@ -120,14 +119,14 @@ export default function PasswordUi() {
           </div>
         </ToolField>
 
-        <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <input
             type="checkbox"
             checked={exclude}
             onChange={(e) => setExclude(e.target.checked)}
             className="h-3.5 w-3.5"
           />
-          排除易混淆字符（O 0 I l 1 | ` ' ")
+          排除易混淆字符（O 0 I l 1 | ` &apos; &quot;）
         </label>
       </div>
     </ToolShell>

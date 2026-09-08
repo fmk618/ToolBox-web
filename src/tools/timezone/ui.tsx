@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
+import { TextField } from "../../components/tools/inputs";
 import { meta } from "./meta";
 
 const DEFAULT_ZONES = [
@@ -77,16 +78,16 @@ export default function TimezoneUi() {
   return (
     <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
       <div className="space-y-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-950">
-          <span className="text-xs text-slate-500">本地时区</span>{" "}
-          <code className="font-mono text-slate-700 dark:text-slate-200">
+        <div className="rounded-xl border border-border bg-background p-3 text-sm">
+          <span className="text-xs text-muted-foreground">本地时区</span>{" "}
+          <code className="font-mono text-foreground">
             {local}
           </code>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+        <div className="overflow-hidden rounded-xl border border-border bg-background">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-xs text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+            <thead className="bg-muted text-xs text-muted-foreground">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">时区</th>
                 <th className="px-3 py-2 text-left font-medium">日期</th>
@@ -101,18 +102,18 @@ export default function TimezoneUi() {
                 return (
                   <tr
                     key={z}
-                    className="border-t border-slate-100 dark:border-slate-800"
+                    className="border-t border-border"
                   >
                     <td className="px-3 py-2 font-mono text-xs">{z}</td>
                     <td className="px-3 py-2 font-mono text-xs">{r.date}</td>
                     <td className="px-3 py-2 font-mono">{r.time}</td>
-                    <td className="px-3 py-2 font-mono text-xs text-slate-500">
+                    <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
                       {r.offset}
                     </td>
                     <td className="px-2">
                       <button
                         onClick={() => removeZone(z)}
-                        className="text-slate-400 hover:text-red-500"
+                        className="text-muted-foreground hover:text-destructive"
                         aria-label={`移除 ${z}`}
                       >
                         ×
@@ -127,16 +128,16 @@ export default function TimezoneUi() {
 
         <ToolField label="添加时区" hint="如 Asia/Hong_Kong、America/Sao_Paulo">
           <div className="flex gap-2">
-            <input
+            <TextField
               value={extra}
               onChange={(e) => setExtra(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addZone()}
               placeholder="IANA 时区名"
-              className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className="flex-1 font-mono"
             />
             <button
               onClick={addZone}
-              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90"
             >
               添加
             </button>

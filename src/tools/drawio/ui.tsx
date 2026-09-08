@@ -2,6 +2,7 @@
 
 import { Download, FileCode, Trash2, Waypoints } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { downloadDataUrl } from "../../lib/download";
 
 // Embeds the open-source draw.io (Apache-2.0) editor via its postMessage embed
 // protocol. The diagram is saved to localStorage on this device only — nothing
@@ -10,27 +11,28 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 const EMBED_HOST = "https://embed.diagrams.net";
 const STORAGE_KEY = "toolbox:drawio:xml";
 
+function embedUrl(): string {
+  const dark = document.documentElement.classList.contains("dark");
+  const params = new URLSearchParams({
+    embed: "1",
+    proto: "json",
+    spin: "1",
+    libraries: "1",
+    noExitBtn: "1",
+    ui: dark ? "dark" : "min",
+  });
+  return `${EMBED_HOST}/?${params.toString()}`;
+}
+
 export default function DrawioUi() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [src, setSrc] = useState("");
+  const [src] = useState(embedUrl);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const dark = document.documentElement.classList.contains("dark");
-    const params = new URLSearchParams({
-      embed: "1",
-      proto: "json",
-      spin: "1",
-      libraries: "1",
-      noExitBtn: "1",
-      ui: dark ? "dark" : "min",
-    });
-    setSrc(`${EMBED_HOST}/?${params.toString()}`);
-  }, []);
-
-  useEffect(() => {
     function post(payload: object) {
-      iframeRef.current?.contentWindow?.postMessage(JSON.stringify(payload), "*");
+      // targetOrigin 锁定 embed 源，防止消息发到被重定向后的其他源
+      iframeRef.current?.contentWindow?.postMessage(JSON.stringify(payload), EMBED_HOST);
     }
     function onMessage(evt: MessageEvent) {
       if (!iframeRef.current || evt.source !== iframeRef.current.contentWindow) return;
@@ -58,7 +60,7 @@ export default function DrawioUi() {
   function exportPng() {
     iframeRef.current?.contentWindow?.postMessage(
       JSON.stringify({ action: "export", format: "xmlpng" }),
-      "*",
+      EMBED_HOST,
     );
   }
   function exportXml() {
@@ -72,7 +74,7 @@ export default function DrawioUi() {
     localStorage.removeItem(STORAGE_KEY);
     iframeRef.current?.contentWindow?.postMessage(
       JSON.stringify({ action: "load", autosave: 1, xml: "" }),
-      "*",
+      EMBED_HOST,
     );
     setSaved(false);
   }
@@ -82,7 +84,7 @@ export default function DrawioUi() {
     <div className="flex h-[calc(100dvh-7.5rem)] min-h-[460px] flex-col gap-2.5">
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-1 flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-muted text-foreground">
             <Waypoints className="h-4 w-4" />
           </span>
           <span className="text-sm font-semibold text-foreground">流程图 · draw.io</span>
@@ -116,10 +118,7 @@ export default function DrawioUi() {
 }
 
 function download(href: string, filename: string) {
-  const a = document.createElement("a");
-  a.href = href;
-  a.download = filename;
-  a.click();
+  downloadDataUrl(href, filename);
 }
 
 function Btn({

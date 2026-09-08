@@ -8,7 +8,7 @@ import {
   FileType,
   type LucideIcon,
 } from "lucide-react";
-import { FORMATS, fmtMeta } from "../../lib/formats";
+import { fmtMeta } from "../../lib/formats";
 
 const ICONS: Record<string, LucideIcon> = {
   pdf: FileType,
@@ -48,23 +48,23 @@ export function FormatCard({
       disabled={disabled}
       className={`group relative flex w-full flex-col items-center gap-2 rounded-xl border px-4 py-4 text-center transition ${
         selected
-          ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200 dark:bg-blue-950/40 dark:ring-blue-900"
+          ? "border-ring bg-accent ring-2 ring-ring/30"
           : disabled
-            ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-50 dark:border-slate-800 dark:bg-slate-900"
-            : `cursor-pointer border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700`
+            ? "cursor-not-allowed border-border bg-muted opacity-50"
+            : `cursor-pointer border-border bg-background hover:-translate-y-0.5 hover:border-ring hover:shadow-sm`
       }`}
     >
       <div className={`grid h-10 w-10 place-items-center rounded-lg border ${m.bg}`}>
         <Icon className={`h-5 w-5 ${m.color}`} />
       </div>
-      <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+      <div className="text-sm font-medium text-foreground">
         {m.label}
       </div>
-      <div className="text-[10px] uppercase tracking-wider text-slate-400">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
         .{m.ext}
       </div>
       {selected && (
-        <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-blue-500" />
+        <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-foreground" />
       )}
     </button>
   );

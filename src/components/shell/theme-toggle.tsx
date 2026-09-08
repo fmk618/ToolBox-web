@@ -1,11 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 
 type Theme = "system" | "light" | "dark";
 
 const STORAGE_KEY = "toolbox.theme";
+const CHANGE_EVENT = "toolbox.theme.change";
+
+function readTheme(): Theme {
+  if (typeof window === "undefined") return "system";
+  const saved = localStorage.getItem(STORAGE_KEY);
+  return saved === "light" || saved === "dark" || saved === "system" ? saved : "system";
+}
+
+function subscribeTheme(callback: () => void) {
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY) callback();
+  };
+  window.addEventListener(CHANGE_EVENT, callback);
+  window.addEventListener("storage", handleStorage);
+  return () => {
+    window.removeEventListener(CHANGE_EVENT, callback);
+    window.removeEventListener("storage", handleStorage);
+  };
+}
+
+function saveTheme(theme: Theme) {
+  localStorage.setItem(STORAGE_KEY, theme);
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+}
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
@@ -15,19 +39,15 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("system");
+  const theme = useSyncExternalStore<Theme>(subscribeTheme, readTheme, () => "system");
 
   useEffect(() => {
-    const saved = (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? "system";
-    setTheme(saved);
-    applyTheme(saved);
-  }, []);
+    applyTheme(theme);
+  }, [theme]);
 
   function cycle() {
     const next: Theme = theme === "system" ? "dark" : theme === "dark" ? "light" : "system";
-    setTheme(next);
-    localStorage.setItem(STORAGE_KEY, next);
-    applyTheme(next);
+    saveTheme(next);
   }
 
   const Icon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;

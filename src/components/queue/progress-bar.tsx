@@ -7,28 +7,28 @@ export function ProgressBar({
 }) {
   if (status === "done") {
     return (
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div className="h-full w-full bg-green-500" />
       </div>
     );
   }
   if (status === "failed") {
     return (
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div className="h-full w-full bg-red-500" />
       </div>
     );
   }
   if (status === "queued") {
     return (
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800" />
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" />
     );
   }
   // Real progress (uploading or processing with known percent)
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
       <div
-        className="h-full bg-blue-500 transition-[width] duration-300 ease-out"
+        className="h-full bg-foreground transition-[width] duration-300 ease-out"
         style={{ width: `${Math.max(0, percent)}%` }}
       />
     </div>

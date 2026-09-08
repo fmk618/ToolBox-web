@@ -4,6 +4,35 @@
 import regexpTree from "regexp-tree";
 const { parse } = regexpTree;
 
+interface Quantifier {
+  greedy?: boolean;
+  kind?: string;
+  from?: number;
+  to?: number | null;
+}
+
+interface AstNode {
+  type: string;
+  kind?: string;
+  greedy?: boolean;
+  from?: AstNode;
+  to?: AstNode | null;
+  symbol?: string;
+  value?: string;
+  left?: AstNode;
+  right?: AstNode;
+  expressions?: AstNode[];
+  expression?: AstNode;
+  quantifier?: Quantifier;
+  capturing?: boolean;
+  name?: string;
+  number?: number;
+  negative?: boolean;
+  assertion?: AstNode;
+  reference?: string;
+  body?: AstNode;
+}
+
 interface Frag {
   markup: string;
   w: number;
@@ -125,7 +154,7 @@ function container(
   return { markup: m, w, h, cy };
 }
 
-function quantLabel(q: any): string {
+function quantLabel(q: Quantifier): string {
   const g = q.greedy ? "" : "（懒惰）";
   switch (q.kind) {
     case "*": return "重复 0 或多个" + g;
@@ -150,16 +179,16 @@ const ANCHOR_CAP: Record<string, string> = {
   "^": "行首", "$": "行尾", "\\b": "单词边界", "\\B": "非单词边界",
 };
 
-function classChar(c: any): string {
+function classChar(c: AstNode): string {
   return c.type === "ClassRange"
-    ? `${c.from.symbol ?? c.from.value}-${c.to.symbol ?? c.to.value}`
-    : c.symbol ?? c.value;
+    ? `${c.from?.symbol ?? c.from?.value ?? ""}-${c.to?.symbol ?? c.to?.value ?? ""}`
+    : c.symbol ?? c.value ?? "";
 }
 
-function flattenDisjunction(node: any): any[] {
-  const out: any[] = [];
-  const walk = (n: any) => {
-    if (n && n.type === "Disjunction") {
+function flattenDisjunction(node: AstNode): AstNode[] {
+  const out: AstNode[] = [];
+  const walk = (n: AstNode) => {
+    if (n.type === "Disjunction" && n.left && n.right) {
       walk(n.left);
       walk(n.right);
     } else out.push(n);
@@ -168,17 +197,17 @@ function flattenDisjunction(node: any): any[] {
   return out;
 }
 
-function render(node: any): Frag {
+function render(node: AstNode | undefined): Frag {
   if (!node) return termBox("ε", "空", C.anchor);
   switch (node.type) {
     case "RegExp":
       return render(node.body);
     case "Alternative":
-      return sequence((node.expressions as any[]).map(render));
+      return sequence((node.expressions ?? []).map(render));
     case "Disjunction":
       return choice(flattenDisjunction(node).map(render));
     case "Repetition":
-      return container(render(node.expression), quantLabel(node.quantifier), {
+      return container(render(node.expression), quantLabel(node.quantifier ?? {}), {
         stroke: "#f59e0b", labelBg: "#fef3c7", labelText: "#b45309", dashed: true,
       });
     case "Group": {
@@ -199,10 +228,11 @@ function render(node: any): Frag {
           stroke: "#94a3b8", labelBg: "#f1f5f9", labelText: "#475569", dashed: true,
         });
       }
-      return termBox(node.kind, ANCHOR_CAP[node.kind] ?? "断言", C.anchor);
+      const kind = node.kind ?? "Assertion";
+      return termBox(kind, ANCHOR_CAP[kind] ?? "断言", C.anchor);
     }
     case "CharacterClass": {
-      const inner = (node.expressions as any[]).map(classChar).join("");
+      const inner = (node.expressions ?? []).map(classChar).join("");
       return termBox(
         `[${node.negative ? "^" : ""}${inner}]`,
         node.negative ? "排除这些字符" : "字符集合",
@@ -216,9 +246,9 @@ function render(node: any): Frag {
         C.backref,
       );
     case "Char": {
+      const tok = node.value ?? "";
       if (node.kind === "meta")
-        return termBox(node.value, META_CAP[node.value] ?? "元字符", C.meta);
-      const tok = node.value;
+        return termBox(tok, META_CAP[tok] ?? "元字符", C.meta);
       return termBox(node.symbol ?? tok, ESC_CAP[tok] ?? "字符", C.literal);
     }
     default:
@@ -237,9 +267,9 @@ export function buildRegexDiagram(
   flags: string,
 ): DiagramResult | { error: string } {
   if (!pattern) return { error: "输入正则表达式后，这里会画出它的结构图" };
-  let ast: any;
+  let ast: AstNode;
   try {
-    ast = parse(`/${pattern}/${flags}`);
+    ast = parse(`/${pattern}/${flags}`) as AstNode;
   } catch (e) {
     return { error: "无法解析该正则：" + (e instanceof Error ? e.message : "语法错误") };
   }

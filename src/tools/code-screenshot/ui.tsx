@@ -3,6 +3,7 @@
 import { useRef, useState, useMemo } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { ToolShell } from "../../components/tools/tool-shell";
+import { Select } from "../../components/tools/select";
 import { meta } from "./meta";
 
 // ── highlight.js — core + selective language imports ────────────────────────
@@ -210,27 +211,16 @@ export default function CodeScreenshotUi() {
         <div className="flex gap-3">
           <div className="flex-1">
             <div className="mb-1 text-xs font-medium text-muted-foreground">语言</div>
-            <select
-              value={lang}
-              onChange={(e) => setLang(e.target.value)}
-              className="w-full rounded-md border border-input bg-muted/50 px-3 py-1.5 text-sm focus:border-ring focus:outline-none"
-            >
-              {LANGS.map((l) => (
-                <option key={l.value} value={l.value}>{l.label}</option>
-              ))}
-            </select>
+            <Select value={lang} onChange={setLang} options={LANGS} className="w-full" />
           </div>
           <div className="flex-1">
             <div className="mb-1 text-xs font-medium text-muted-foreground">主题</div>
-            <select
+            <Select
               value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              className="w-full rounded-md border border-input bg-muted/50 px-3 py-1.5 text-sm focus:border-ring focus:outline-none"
-            >
-              {THEME_KEYS.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+              onChange={setTheme}
+              options={THEME_KEYS.map((t) => ({ value: t, label: t }))}
+              className="w-full"
+            />
           </div>
         </div>
 

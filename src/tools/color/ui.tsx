@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
+import { TextField } from "../../components/tools/inputs";
+import { ErrorBox } from "../../components/tools/error-box";
 import { CopyButton } from "../../components/tools/copy-button";
 import { meta } from "./meta";
 import { hexToRgb, rgbToHex, rgbToHsl } from "./lib";
@@ -30,44 +32,34 @@ export default function ColorUi() {
             type="color"
             value={data?.hex ?? "#3b82f6"}
             onChange={(e) => setHex(e.target.value)}
-            className="h-16 w-20 cursor-pointer rounded-lg border border-slate-200 dark:border-slate-700"
+            className="h-16 w-20 cursor-pointer rounded-lg border border-border"
           />
           <div
-            className="h-16 flex-1 rounded-lg border border-slate-200 dark:border-slate-700"
+            className="h-16 flex-1 rounded-lg border border-border"
             style={{ background: data?.preview ?? "transparent" }}
           />
         </div>
 
         <ToolField label="Hex">
-          <input
+          <TextField
             value={hex}
             onChange={(e) => setHex(e.target.value)}
             placeholder="#3b82f6"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className="font-mono text-sm"
           />
         </ToolField>
 
         {data ? (
           <>
             <ToolField label="RGB" action={<CopyButton value={data.rgbStr} />}>
-              <input
-                readOnly
-                value={data.rgbStr}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-              />
+              <TextField readOnly value={data.rgbStr} className="bg-muted font-mono text-sm" />
             </ToolField>
             <ToolField label="HSL" action={<CopyButton value={data.hslStr} />}>
-              <input
-                readOnly
-                value={data.hslStr}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-              />
+              <TextField readOnly value={data.hslStr} className="bg-muted font-mono text-sm" />
             </ToolField>
           </>
         ) : (
-          <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-            不是有效的 Hex 颜色
-          </div>
+          <ErrorBox>不是有效的 Hex 颜色</ErrorBox>
         )}
       </div>
     </ToolShell>

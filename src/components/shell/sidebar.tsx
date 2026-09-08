@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { ChevronRight, Clock, Search, Star, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CATEGORIES } from "../../lib/tools/categories";
-import { TOOLS } from "../../lib/tools/manifest";
+import { TOOLS, toolsByCategory } from "../../lib/tools/manifest";
 import { useJobs } from "../../lib/jobs";
 import type { ToolMeta } from "../../lib/tools/types";
 import { toolColor } from "../../lib/tools/colors";
@@ -28,14 +28,7 @@ export function Sidebar({
   const favorites = useFavorites();
   const recents = useRecents();
 
-  const toolsByCat = useMemo(() => {
-    const m = new Map<string, ToolMeta[]>();
-    for (const t of TOOLS) {
-      if (!m.has(t.category)) m.set(t.category, []);
-      m.get(t.category)!.push(t);
-    }
-    return m;
-  }, []);
+  const toolsByCat = useMemo(() => new Map(toolsByCategory()), []);
 
   const favTools = useMemo(
     () => favorites.map((s) => TOOLS.find((t) => t.slug === s)).filter((t): t is ToolMeta => t !== undefined),

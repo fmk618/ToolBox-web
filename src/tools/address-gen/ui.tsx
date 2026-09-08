@@ -1,7 +1,7 @@
 "use client";
 
 import { RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
 import { CopyButton } from "../../components/tools/copy-button";
 import { Select } from "../../components/tools/select";
@@ -12,12 +12,12 @@ const COUNTRY_OPTS = COUNTRIES.map((c) => ({ value: c.code, label: c.label }));
 
 export default function AddressGenUi() {
   const [country, setCountry] = useState<CountryCode>("SG");
-  const [id, setId] = useState<FakeIdentity | null>(null);
+  const [id, setId] = useState<FakeIdentity>(() => generate("SG"));
 
-  // generate on mount and whenever the country changes (client-only — ssr:false)
-  useEffect(() => {
-    setId(generate(country));
-  }, [country]);
+  function selectCountry(next: CountryCode) {
+    setCountry(next);
+    setId(generate(next));
+  }
 
   return (
     <ToolShell icon={meta.icon} title={meta.name} description={meta.description}>
@@ -27,7 +27,7 @@ export default function AddressGenUi() {
             <ToolField label="国家 / 地区">
               <Select
                 value={country}
-                onChange={(v) => setCountry(v as CountryCode)}
+                onChange={(v) => selectCountry(v as CountryCode)}
                 options={COUNTRY_OPTS}
                 ariaLabel="国家"
               />

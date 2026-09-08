@@ -1,51 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createLocalStore } from "./create-local-store";
 
-const KEY = "toolbox.recents";
-const EVENT = "toolbox.recents.change";
-const MAX = 8;
-
-function read(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as string[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function write(slugs: string[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(slugs));
-    window.dispatchEvent(new CustomEvent(EVENT));
-  } catch {
-    /* quota exceeded */
-  }
-}
+const store = createLocalStore<string[]>("toolbox.recents", { max: 8 });
 
 export function pushRecent(slug: string): void {
-  const list = read().filter((s) => s !== slug);
-  write([slug, ...list].slice(0, MAX));
+  store.write([slug, ...(store.read() ?? []).filter((s) => s !== slug)]);
 }
 
 export function removeRecent(slug: string): void {
-  write(read().filter((s) => s !== slug));
+  store.write((store.read() ?? []).filter((s) => s !== slug));
 }
 
 export function useRecents(): string[] {
-  const [list, setList] = useState<string[]>([]);
-  useEffect(() => {
-    setList(read());
-    const handler = () => setList(read());
-    window.addEventListener(EVENT, handler);
-    window.addEventListener("storage", handler);
-    return () => {
-      window.removeEventListener(EVENT, handler);
-      window.removeEventListener("storage", handler);
-    };
-  }, []);
-  return list;
+  return store.useValue() ?? [];
 }

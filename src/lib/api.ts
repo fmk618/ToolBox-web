@@ -1,7 +1,19 @@
-export const API_BASE =
-  (typeof window !== "undefined" && localStorage.getItem("toolbox.apiBase")) ||
-  process.env.NEXT_PUBLIC_API_BASE ||
-  "/api";
+"use client";
+
+/** localStorage 键：用户在系统设置里自定义的后端地址。 */
+export const API_BASE_KEY = "toolbox.apiBase";
+
+/**
+ * 后端地址按调用时解析（而不是模块加载时常量）：
+ * 用户设置 > 构建期注入 > 同源 /api。改完设置立即生效，无需整页刷新。
+ */
+export function getApiBase(): string {
+  return (
+    (typeof window !== "undefined" && localStorage.getItem(API_BASE_KEY)) ||
+    process.env.NEXT_PUBLIC_API_BASE ||
+    "/api"
+  );
+}
 
 export type Routes = Record<string, { to: string; engine: string }[]>;
 
@@ -29,7 +41,7 @@ export type LLMTestBody = {
 };
 
 export async function fetchProviders(): Promise<ProviderSpec[]> {
-  const res = await fetch(`${API_BASE}/providers`, { cache: "no-store" });
+  const res = await fetch(`${getApiBase()}/providers`, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -37,7 +49,7 @@ export async function fetchProviders(): Promise<ProviderSpec[]> {
 export async function testLLMSettings(
   body: LLMTestBody,
 ): Promise<{ ok: boolean; message: string }> {
-  const res = await fetch(`${API_BASE}/settings/llm/test`, {
+  const res = await fetch(`${getApiBase()}/settings/llm/test`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -46,27 +58,57 @@ export async function testLLMSettings(
   return res.json();
 }
 
-const FILE_CONVERT = `${API_BASE}/tools/file-convert`;
-
 export async function fetchRoutes(): Promise<Routes> {
-  const res = await fetch(`${FILE_CONVERT}/routes`, { cache: "no-store" });
+  const res = await fetch(`${getApiBase()}/tools/file-convert/routes`, {
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
 export async function fetchEngines(): Promise<EngineInfo[]> {
-  const res = await fetch(`${FILE_CONVERT}/engines`, { cache: "no-store" });
+  const res = await fetch(`${getApiBase()}/tools/file-convert/engines`, {
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
 export async function checkHealth(): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/health`, { cache: "no-store" });
+    const res = await fetch(`${getApiBase()}/health`, { cache: "no-store" });
     return res.ok;
   } catch {
     return false;
   }
+}
+
+/** 从后端错误响应里尽量提取可读信息（FastAPI 约定 {"detail": ...}）。 */
+async function readErrorMessage(status: number, res: Response): Promise<string> {
+  const text = await res.text().catch(() => "");
+  try {
+    const detail = (JSON.parse(text) as { detail?: unknown }).detail;
+    if (typeof detail === "string" && detail) return detail;
+  } catch {
+    /* 非 JSON 响应体，直接用原文 */
+  }
+  return text || `HTTP ${status}`;
+}
+
+/**
+ * POST FormData 到工具端点，返回二进制结果。
+ * 统一错误处理：非 2xx 抛出后端 detail（而不是干巴巴的 HTTP 状态码）。
+ */
+export async function postFormForBlob(
+  path: string,
+  form: FormData,
+): Promise<Blob> {
+  const res = await fetch(`${getApiBase()}${path}`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) throw new Error(await readErrorMessage(res.status, res));
+  return res.blob();
 }
 
 export function reachableFormats(routes: Routes, src: string | null): string[] {
@@ -104,7 +146,10 @@ export function submitJob(
 ): Promise<{ job_id: string }> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${FILE_CONVERT}/jobs?to=${encodeURIComponent(to)}`);
+    xhr.open(
+      "POST",
+      `${getApiBase()}/tools/file-convert/jobs?to=${encodeURIComponent(to)}`,
+    );
     xhr.responseType = "json";
 
     xhr.upload.onprogress = (e) => {
@@ -143,7 +188,10 @@ export type JobStatusResponse = {
 
 /** GET /jobs/{job_id} — poll conversion progress. */
 export async function pollJob(jobId: string): Promise<JobStatusResponse> {
-  const res = await fetch(`${FILE_CONVERT}/jobs/${jobId}`, { cache: "no-store" });
+  const res = await fetch(
+    `${getApiBase()}/tools/file-convert/jobs/${encodeURIComponent(jobId)}`,
+    { cache: "no-store" },
+  );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -153,7 +201,9 @@ export async function downloadJobResult(
   jobId: string,
   fallbackFilename: string,
 ): Promise<{ blob: Blob; filename: string }> {
-  const res = await fetch(`${FILE_CONVERT}/jobs/${jobId}/result`);
+  const res = await fetch(
+    `${getApiBase()}/tools/file-convert/jobs/${encodeURIComponent(jobId)}/result`,
+  );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const cd = res.headers.get("content-disposition") ?? "";
   const match = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
@@ -174,7 +224,7 @@ export function convertFile(
     const xhr = new XMLHttpRequest();
     xhr.open(
       "POST",
-      `${FILE_CONVERT}/convert?to=${encodeURIComponent(to)}`,
+      `${getApiBase()}/tools/file-convert/convert?to=${encodeURIComponent(to)}`,
     );
     xhr.responseType = "blob";
 
