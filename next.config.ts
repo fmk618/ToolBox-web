@@ -8,6 +8,8 @@ const baseConfig: NextConfig = {
   output: isTauri ? "export" : "standalone",
   ...(isTauri && { images: { unoptimized: true } }),
   devIndicators: false,
+  // 从局域网设备访问开发服务器时，允许 Next.js HMR WebSocket 连接。
+  allowedDevOrigins: ["192.168.1.166"],
   // 消除 Next.js 16 Turbopack 与 next-pwa webpack 配置的冲突警告
   turbopack: {},
 };
