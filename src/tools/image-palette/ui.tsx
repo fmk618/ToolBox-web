@@ -26,7 +26,11 @@ export default function ImagePaletteUi() {
       const scale = Math.min(1, max / Math.max(image.naturalWidth, image.naturalHeight));
       const width = Math.max(1, Math.round(image.naturalWidth * scale));
       const height = Math.max(1, Math.round(image.naturalHeight * scale));
-      const canvas = canvasRef.current!;
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        URL.revokeObjectURL(url);
+        return;
+      }
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
@@ -60,47 +64,47 @@ export default function ImagePaletteUi() {
   return (
     <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-4">
-        {!imageName ? (
+        {!imageName && (
           <FileDropZone
             accept="image/png,image/jpeg,image/webp,image/gif,image/bmp"
             onFiles={load}
             title="拖入一张图片，或"
             hint="图片仅在本地分析，不会上传 · 支持 PNG / JPG / WebP / GIF / BMP"
           />
-        ) : (
-          <>
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background p-3">
-              <span className="truncate text-sm text-foreground">{imageName}</span>
-              <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-                主色数量
-                <input type="range" min="3" max="12" value={count} onChange={(e) => refreshPalette(Number(e.target.value))} className="w-24 accent-foreground" />
-                <span className="w-4 text-right">{count}</span>
-              </label>
-              <Button variant="outline" size="sm" onClick={() => { setImageName(""); setColors([]); setPicked(null); }}><Upload className="h-4 w-4" />换一张</Button>
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
-              <div className="overflow-hidden rounded-xl border border-border bg-muted/30 p-2">
-                <canvas
-                  ref={canvasRef}
-                  onClick={pick}
-                  title="点击图片任意位置取色"
-                  className="block max-h-[34rem] w-full cursor-crosshair object-contain"
-                />
-              </div>
-              <aside className="space-y-4">
-                <section>
-                  <h2 className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Crosshair className="h-4 w-4" />精确取色</h2>
-                  {picked ? <ColorCard color={picked} large /> : <Empty>点击左侧图片取色</Empty>}
-                </section>
-                <section>
-                  <h2 className="mb-2 text-xs font-medium text-muted-foreground">自动主色</h2>
-                  <div className="space-y-2">{colors.map((color) => <ColorCard key={toHex(color)} color={color} />)}</div>
-                </section>
-              </aside>
-            </div>
-          </>
         )}
+
+        {imageName && (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background p-3">
+            <span className="truncate text-sm text-foreground">{imageName}</span>
+            <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+              主色数量
+              <input type="range" min="3" max="12" value={count} onChange={(e) => refreshPalette(Number(e.target.value))} className="w-24 accent-foreground" />
+              <span className="w-4 text-right">{count}</span>
+            </label>
+            <Button variant="outline" size="sm" onClick={() => { setImageName(""); setColors([]); setPicked(null); }}><Upload className="h-4 w-4" />换一张</Button>
+          </div>
+        )}
+
+        <div className={imageName ? "grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]" : "hidden"}>
+          <div className="overflow-hidden rounded-xl border border-border bg-muted/30 p-2">
+            <canvas
+              ref={canvasRef}
+              onClick={pick}
+              title="点击图片任意位置取色"
+              className="block max-h-[34rem] w-full cursor-crosshair object-contain"
+            />
+          </div>
+          <aside className="space-y-4">
+            <section>
+              <h2 className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Crosshair className="h-4 w-4" />精确取色</h2>
+              {picked ? <ColorCard color={picked} large /> : <Empty>点击左侧图片取色</Empty>}
+            </section>
+            <section>
+              <h2 className="mb-2 text-xs font-medium text-muted-foreground">自动主色</h2>
+              <div className="space-y-2">{colors.map((color) => <ColorCard key={toHex(color)} color={color} />)}</div>
+            </section>
+          </aside>
+        </div>
       </div>
     </ToolShell>
   );
