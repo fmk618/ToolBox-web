@@ -75,7 +75,7 @@ export default function SystemSettingsUi() {
       <div className="space-y-4">
         <LLMSection />
 
-        <Section title="后端连接" desc="配置 Toolbox HTTP API 地址">
+        <Section title="后端连接" desc="配置 FMKTools HTTP API 地址">
           <label className="block text-xs font-medium text-muted-foreground">
             API Base URL
           </label>

@@ -3,6 +3,7 @@
 import { Pause, Play, RotateCcw, SkipForward } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ToolShell, ToolField } from "../../components/tools/tool-shell";
+import { BRAND_NAME } from "../../lib/brand";
 import { meta } from "./meta";
 import { cn } from "../../lib/utils";
 
@@ -68,9 +69,9 @@ export default function PomodoroUi() {
   useEffect(() => {
     const label = phase === "focus" ? "专注" : phase === "short" ? "短休" : "长休";
     if (running) {
-      document.title = `${fmt(remaining)} · ${label} | Toolbox`;
+      document.title = `${fmt(remaining)} · ${label} | ${BRAND_NAME}`;
     } else {
-      document.title = "Toolbox";
+      document.title = BRAND_NAME;
     }
   }, [running, remaining, phase]);
 

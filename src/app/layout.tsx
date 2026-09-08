@@ -2,14 +2,15 @@ import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Shell } from "../components/shell/shell";
+import { BRAND_DESCRIPTION, BRAND_NAME } from "../lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Toolbox — 工具百宝箱",
-    template: "%s · Toolbox",
+    default: BRAND_NAME,
+    template: `%s · ${BRAND_NAME}`,
   },
-  description: "工具百宝箱 — 常用小工具集合，全部本地运行，按 ⌘K 快速搜索",
+  description: BRAND_DESCRIPTION,
 };
 
 export const viewport: Viewport = {

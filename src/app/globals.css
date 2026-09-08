@@ -30,7 +30,7 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
 
-  /* Brand accent — keep slight blue lean for Toolbox identity */
+  /* FMKTools brand accent — keep a slight blue lean */
   --brand: oklch(0.55 0.18 257);
   --brand-foreground: oklch(0.985 0 0);
 

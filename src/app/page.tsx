@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { CATEGORIES } from "../lib/tools/categories";
+import { BRAND_NAME } from "../lib/brand";
 import { toolsByCategory } from "../lib/tools/manifest";
 
 export default function HomePage() {
@@ -17,7 +18,7 @@ export default function HomePage() {
         className="mb-10"
       >
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          工具百宝箱
+          {BRAND_NAME}
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           常用小工具集合，全部本地运行 · 按{" "}

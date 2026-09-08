@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.6
 #
-# Toolbox 前端镜像（Next.js standalone build）
+# FMKTools 前端镜像（Next.js standalone build）
 #
 # 构建：
 #   docker build -t toolbox-web ./web

@@ -1,8 +1,9 @@
 import type { SVGProps } from "react";
+import { BRAND_NAME } from "../../lib/brand";
 import { cn } from "../../lib/utils";
 
 /**
- * Toolbox letter-mark — a geometric "T" built from two rounded rectangles.
+ * FMKTools letter-mark — a geometric glyph built from two rounded rectangles.
  *
  * `currentColor` is the glyph fill, so it inherits text color from its parent.
  * Use `<LogoMark className="text-white" />` inside a colored container, or
@@ -46,7 +47,7 @@ export function LogoBadge({
   );
 }
 
-/** Pure word-mark — "Toolbox" set in Geist Sans with subtle tracking. */
+/** Pure word-mark set in Geist Sans with subtle tracking. */
 export function LogoWordmark({ className }: { className?: string }) {
   return (
     <span
@@ -55,7 +56,7 @@ export function LogoWordmark({ className }: { className?: string }) {
         className,
       )}
     >
-      Toolbox
+      {BRAND_NAME}
     </span>
   );
 }

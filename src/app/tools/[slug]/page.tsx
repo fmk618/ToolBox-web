@@ -15,7 +15,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const tool = TOOLS.find((t) => t.slug === slug);
   if (!tool) return {};
-  // layout.tsx 的 title.template 会自动追加 "· Toolbox"
+  // layout.tsx 的 title.template 会自动追加 “· FMKTools”
   return { title: tool.name, description: tool.description };
 }
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { ChevronRight, Menu } from "lucide-react";
+import { BRAND_NAME } from "../../lib/brand";
 import { getTool } from "../../lib/tools/manifest";
 import { WechatButton } from "./wechat-button";
 
@@ -29,7 +30,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
         <div className="min-w-0">
           <nav className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
             <Link href="/" className="hover:text-foreground transition-colors">
-              Toolbox
+              {BRAND_NAME}
             </Link>
             <ChevronRight className="h-3 w-3" />
             <span className="text-foreground/80">{title}</span>

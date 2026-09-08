@@ -32,8 +32,8 @@ function convert(dir: Dir, input: string): { out: string; err: string } {
 }
 
 const PLACEHOLDER: Record<Dir, string> = {
-  "yaml-to-json": "name: toolbox\nversion: 0.1.0\ntools:\n  - base64\n  - jwt",
-  "json-to-yaml": '{"name": "toolbox", "version": "0.1.0"}',
+  "yaml-to-json": "name: FMKTools\nversion: 0.1.0\ntools:\n  - base64\n  - jwt",
+  "json-to-yaml": '{"name": "FMKTools", "version": "0.1.0"}',
 };
 
 export default function YamlJsonUi() {

@@ -1,12 +1,13 @@
 import type { MetadataRoute } from "next";
+import { BRAND_DESCRIPTION, BRAND_NAME } from "../lib/brand";
 
 export const dynamic = "force-static";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Toolbox — 工具百宝箱",
-    short_name: "Toolbox",
-    description: "52 个日常小工具，本地优先，开箱即用",
+    name: BRAND_NAME,
+    short_name: BRAND_NAME,
+    description: BRAND_DESCRIPTION,
     start_url: "/",
     display: "standalone",
     background_color: "#000000",

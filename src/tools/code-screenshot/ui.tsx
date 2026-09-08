@@ -153,7 +153,7 @@ const DEFAULT_CODE = `function greet(name: string): string {
   return \`Hello, \${name}!\`;
 }
 
-console.log(greet("Toolbox"));`;
+console.log(greet("FMKTools"));`;
 
 // ── build inline <style> for hljs tokens ───────────────────────────────────
 function buildStyle(theme: ThemeDef): string {

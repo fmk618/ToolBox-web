@@ -1,6 +1,6 @@
-# Toolbox · Web 前端
+# FMKTools · Web 前端
 
-> Toolbox 项目的浏览器端 ——「工具百宝箱」。
+> FMKTools 的浏览器端 —— 本地优先的常用小工具集合「工具百宝箱」。
 > 这是 [fmk618/ToolBox](https://github.com/fmk618/ToolBox) 的 `web/` 子模块；
 > 绝大多数工具纯前端运行，仅文件格式转换 / 图片修复依赖 Python 后端。
 
@@ -67,10 +67,10 @@ web/
 │   │   ├── layout.tsx            # 根布局 + Geist 字体 + 全局标题模板
 │   │   ├── page.tsx              # 首页：按分类网格展示所有工具
 │   │   ├── globals.css           # Tailwind + OKLCH 语义色令牌
-│   │   ├── icon.svg              # 黑底 T 字母 favicon
+│   │   ├── icon.svg              # FMKTools 几何 T 标 favicon
 │   │   └── tools/[slug]/page.tsx # 动态工具路由（SSG + 独立标题/描述）
 │   ├── components/
-│   │   ├── brand/logo.tsx        # T 字母标 + 词标
+│   │   ├── brand/logo.tsx        # 几何 T 标 + FMKTools 词标
 │   │   ├── shell/                # sidebar / topbar / command-palette / wechat
 │   │   ├── convert/              # 文件转换专区组件
 │   │   └── tools/                # 全站复用六件套：
@@ -134,7 +134,7 @@ src/tools/<slug>/
 
 ## 🎨 设计
 
-- **品牌**：T 字母标（手写 SVG），黑底白字，深色模式自动反相
+- **品牌**：FMKTools 几何 T 标（手写 SVG），黑底白字，深色模式自动反相
 - **语义令牌**：界面颜色一律用 `bg-background` / `text-muted-foreground` / `border-border`
   等语义类，不写裸 `slate-*`，深浅色自动成立
 - **导航**：分类侧栏 + 工具点状彩色连接（每个工具固定颜色，激活态用自身色渲染文字与发光圆点）
