@@ -148,10 +148,6 @@ export default function HttpRefUi() {
               ))}
             </div>
           ))}
-
-        <p className="text-center text-[11px] text-muted-foreground">
-          纯静态数据，离线可用 · 不联网
-        </p>
       </div>
     </ToolShell>
   );
