@@ -40,8 +40,8 @@ export default function NetLookupUi() {
         {mode === "ip" ? <IpPanel /> : <DnsPanel />}
 
         <p className="text-xs leading-relaxed text-muted-foreground">
-          IP 归属地来自 ipwho.is，域名解析走 Google DNS-over-HTTPS。两类查询需联网，
-          请求由浏览器直连，不经本项目后端。
+          IP 归属地由 ipwho.is 直连查询；留空时该服务会识别浏览器当前出口 IP。DNS 查询的域名及记录类型优先发给
+          Cloudflare DoH，仅在失败时发给 Google DoH。请求均从浏览器直连、不经 FMKTools 后端；服务提供商可看到你的出口 IP。
         </p>
       </div>
     </ToolShell>
