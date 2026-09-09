@@ -27,20 +27,32 @@ export function Sidebar({
     () => TOOLS.find((tool) => tool.slug === activeSlug)?.category,
     [activeSlug],
   );
-  const [expandedForSlug, setExpandedForSlug] = useState<{
+  const [expansionForSlug, setExpansionForSlug] = useState<{
     slug: string | undefined;
     category: CategoryId | null;
-  }>(() => ({ slug: activeSlug, category: null }));
-  const extraExpandedCategory =
-    expandedForSlug.slug === activeSlug ? expandedForSlug.category : null;
+    activeCollapsed: boolean;
+  }>(() => ({ slug: activeSlug, category: null, activeCollapsed: false }));
+  const activeExpansion =
+    expansionForSlug.slug === activeSlug ? expansionForSlug : null;
+  const extraExpandedCategory = activeExpansion?.category ?? null;
+  const activeCategoryCollapsed = activeExpansion?.activeCollapsed ?? false;
 
   function toggleCategory(category: CategoryId) {
-    if (category === activeCategory) return;
-    setExpandedForSlug((current) => {
-      const currentCategory = current.slug === activeSlug ? current.category : null;
+    setExpansionForSlug((current) => {
+      const currentExpansion =
+        current.slug === activeSlug
+          ? current
+          : { slug: activeSlug, category: null, activeCollapsed: false };
+      if (category === activeCategory) {
+        return {
+          ...currentExpansion,
+          activeCollapsed: !currentExpansion.activeCollapsed,
+        };
+      }
       return {
-        slug: activeSlug,
-        category: currentCategory === category ? null : category,
+        ...currentExpansion,
+        category:
+          currentExpansion.category === category ? null : category,
       };
     });
   }
@@ -112,7 +124,10 @@ export function Sidebar({
             label={cat.label}
             icon={cat.icon}
             tools={toolsByCat.get(cat.id) ?? []}
-            open={cat.id === activeCategory || cat.id === extraExpandedCategory}
+            open={
+              (cat.id === activeCategory && !activeCategoryCollapsed) ||
+              cat.id === extraExpandedCategory
+            }
             onToggle={() => toggleCategory(cat.id)}
             activeSlug={activeSlug}
             favorites={favorites}
