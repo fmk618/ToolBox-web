@@ -4,6 +4,7 @@ import type { ToolMeta } from "./types";
 import { meta as fileConvert } from "../../tools/file-convert/meta";
 import { meta as pdfMerge } from "../../tools/pdf-merge/meta";
 import { meta as pdfSplit } from "../../tools/pdf-split/meta";
+import { meta as pdfOrganize } from "../../tools/pdf-organize/meta";
 import { meta as base64 } from "../../tools/base64/meta";
 import { meta as urlCodec } from "../../tools/url-codec/meta";
 import { meta as htmlEntity } from "../../tools/html-entity/meta";
@@ -70,6 +71,7 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [fileConvert, () => import("../../tools/file-convert/ui")],
   [pdfMerge, () => import("../../tools/pdf-merge/ui")],
   [pdfSplit, () => import("../../tools/pdf-split/ui")],
+  [pdfOrganize, () => import("../../tools/pdf-organize/ui")],
   [base64, () => import("../../tools/base64/ui")],
   [urlCodec, () => import("../../tools/url-codec/ui")],
   [htmlEntity, () => import("../../tools/html-entity/ui")],
