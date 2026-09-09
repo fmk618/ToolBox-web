@@ -1,15 +1,34 @@
+import { networkInterfaces } from "node:os";
 import type { NextConfig } from "next";
 import withPWA from "@ducanh2912/next-pwa";
 
 const isTauri = process.env.TAURI === "1";
+
+const configuredDevOrigins = (process.env.NEXT_DEV_ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const lanDevOrigins = Object.values(networkInterfaces())
+  .flatMap((interfaces) => interfaces ?? [])
+  .filter(({ address, family, internal }) => {
+    if (family !== "IPv4" || internal) return false;
+    const [first, second] = address.split(".").map(Number);
+    return (
+      first === 10 ||
+      (first === 172 && second >= 16 && second <= 31) ||
+      (first === 192 && second === 168)
+    );
+  })
+  .map(({ address }) => address);
 
 const baseConfig: NextConfig = {
   // standalone 输出供 Docker 多阶段构建；TAURI=1 时切换为静态导出
   output: isTauri ? "export" : "standalone",
   ...(isTauri && { images: { unoptimized: true } }),
   devIndicators: false,
-  // 从局域网设备访问开发服务器时，允许 Next.js HMR WebSocket 连接。
-  allowedDevOrigins: ["192.168.1.169"],
+  // 开发时自动允许本机当前局域网 IPv4；额外域名可由未提交的环境变量补充。
+  allowedDevOrigins: [...new Set([...lanDevOrigins, ...configuredDevOrigins])],
   // 消除 Next.js 16 Turbopack 与 next-pwa webpack 配置的冲突警告
   turbopack: {},
 };
