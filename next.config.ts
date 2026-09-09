@@ -4,6 +4,8 @@ import withPWA from "@ducanh2912/next-pwa";
 
 const isTauri = process.env.TAURI === "1";
 
+const localDevOrigins = ["127.0.0.1", "[::1]"];
+
 const configuredDevOrigins = (process.env.NEXT_DEV_ALLOWED_ORIGINS ?? "")
   .split(",")
   .map((origin) => origin.trim())
@@ -27,8 +29,10 @@ const baseConfig: NextConfig = {
   output: isTauri ? "export" : "standalone",
   ...(isTauri && { images: { unoptimized: true } }),
   devIndicators: false,
-  // 开发时自动允许本机当前局域网 IPv4；额外域名可由未提交的环境变量补充。
-  allowedDevOrigins: [...new Set([...lanDevOrigins, ...configuredDevOrigins])],
+  // 开发时自动允许本机回环与当前局域网 IPv4；额外域名可由未提交的环境变量补充。
+  allowedDevOrigins: [
+    ...new Set([...localDevOrigins, ...lanDevOrigins, ...configuredDevOrigins]),
+  ],
   // 消除 Next.js 16 Turbopack 与 next-pwa webpack 配置的冲突警告
   turbopack: {},
 };
