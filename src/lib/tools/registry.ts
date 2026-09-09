@@ -35,6 +35,7 @@ import { meta as svgMin } from "../../tools/svg-min/meta";
 import { meta as timestamp } from "../../tools/timestamp/meta";
 import { meta as timezone } from "../../tools/timezone/meta";
 import { meta as dateCalc } from "../../tools/date-calc/meta";
+import { meta as icsGenerate } from "../../tools/ics-generate/meta";
 import { meta as pomodoro } from "../../tools/pomodoro/meta";
 import { meta as cronParse } from "../../tools/cron-parse/meta";
 import { meta as netLookup } from "../../tools/net-lookup/meta";
@@ -101,6 +102,7 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [timestamp, () => import("../../tools/timestamp/ui")],
   [timezone, () => import("../../tools/timezone/ui")],
   [dateCalc, () => import("../../tools/date-calc/ui")],
+  [icsGenerate, () => import("../../tools/ics-generate/ui")],
   [pomodoro, () => import("../../tools/pomodoro/ui")],
   [cronParse, () => import("../../tools/cron-parse/ui")],
   [netLookup, () => import("../../tools/net-lookup/ui")],
