@@ -16,6 +16,7 @@ import { meta as hash } from "../../tools/hash/meta";
 import { meta as md5 } from "../../tools/md5/meta";
 import { meta as password } from "../../tools/password/meta";
 import { meta as jwtDecode } from "../../tools/jwt-decode/meta";
+import { meta as certInspect } from "../../tools/cert-inspect/meta";
 import { meta as calculator } from "../../tools/calculator/meta";
 import { meta as unitConvert } from "../../tools/unit-convert/meta";
 import { meta as baseConvert } from "../../tools/base-convert/meta";
@@ -82,6 +83,7 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [md5, () => import("../../tools/md5/ui")],
   [password, () => import("../../tools/password/ui")],
   [jwtDecode, () => import("../../tools/jwt-decode/ui")],
+  [certInspect, () => import("../../tools/cert-inspect/ui")],
   [calculator, () => import("../../tools/calculator/ui")],
   [unitConvert, () => import("../../tools/unit-convert/ui")],
   [baseConvert, () => import("../../tools/base-convert/ui")],
