@@ -11,7 +11,10 @@
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
+    "@excalidraw/excalidraw": "0.18.1",
     "@radix-ui/react-dialog": "^1.1.17",
+    "@univerjs/preset-sheets-core": "0.25.1",
+    "@univerjs/presets": "0.25.1",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "asn1js": "^3.0.10",
@@ -34,6 +37,7 @@
     "jsonpath-plus": "^10.4.0",
     "lucide-react": "^1.18.0",
     "marked": "^18.0.12",
+    "mind-elixir": "5.15.1",
     "next": "16.2.9",
     "pdf-lib": "^1.17.1",
     "pkijs": "^3.4.0",
@@ -42,6 +46,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "regexp-tree": "^0.1.27",
+    "rxjs": "7.8.2",
     "sql.js": "^1.14.2",
     "tailwind-merge": "^3.6.0"
   },

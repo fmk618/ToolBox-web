@@ -9,6 +9,7 @@ export function ToolShell({
   title,
   description,
   local,
+  wide,
   children,
 }: {
   icon: LucideIcon;
@@ -16,10 +17,12 @@ export function ToolShell({
   description: string;
   /** 纯本地工具：展示"不上传"提示，消除用户对隐私的顾虑 */
   local?: boolean;
+  /** 大型编辑器使用更宽的工作区 */
+  wide?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className={`mx-auto ${wide ? "max-w-6xl" : "max-w-4xl"} space-y-6`}>
       <header className="flex items-start gap-3">
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-muted text-foreground">
           <Icon className="h-5 w-5" />
