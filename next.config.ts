@@ -33,8 +33,21 @@ const baseConfig: NextConfig = {
   allowedDevOrigins: [
     ...new Set([...localDevOrigins, ...lanDevOrigins, ...configuredDevOrigins]),
   ],
-  // 消除 Next.js 16 Turbopack 与 next-pwa webpack 配置的冲突警告
-  turbopack: {},
+  // next-pwa 注入 webpack 配置；Next 16 要求同时存在 turbopack 键以确认
+  // 使用 Turbopack（空配置即可），否则构建直接报错。
+  // 覆盖内置的 .wasm 处理（其生成的 loader 会尝试把 wasm 的导入命名空间
+  // 当作模块解析而构建失败）；改为按 asset 返回 URL，由 Worker fetch 后
+  // 以 wasmBinary 传给 sql.js。
+  turbopack: {
+    rules: {
+      "**/sqlite-viewer/worker.js": {
+        type: "ecmascript",
+      },
+      "**/*.wasm": {
+        type: "asset",
+      },
+    },
+  },
 };
 
 export default isTauri

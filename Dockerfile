@@ -28,9 +28,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# 默认指向本地 dev 后端；生产构建时通过 --build-arg 覆盖
+# 默认指向本地 dev 后端；生产构建时通过 --build-arg 覆盖。
+# NEXT_PUBLIC_* 会被 Next.js 内联，公开分享地址也必须在构建期传入。
 ARG NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000
+ARG NEXT_PUBLIC_SHARE_BASE_URL=https://feimake.com/
 ENV NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE}
+ENV NEXT_PUBLIC_SHARE_BASE_URL=${NEXT_PUBLIC_SHARE_BASE_URL}
 
 # Next.js standalone 输出大幅瘦身（只含运行时需要的 node_modules 子集）
 RUN npm run build
