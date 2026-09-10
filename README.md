@@ -6,7 +6,7 @@
 
 ## ✨ 一览
 
-- **52 个工具**，覆盖编解码 / 加密哈希 / 文本数据 / 时间 / 开发 / 颜色 / 图片 / 网络等分类
+- **71 个工具**，覆盖编解码 / 加密哈希 / 文本数据 / 时间 / 开发 / 颜色 / 图片 / 网络等分类
 - **语义色令牌**：OKLCH 设计变量 · 浅深双模 · 统一六件套表单组件
 - **⌘K 命令面板**：全工具搜索 + 键盘导航
 - **侧栏点链导航**：每个工具自带稳定主色，圆点 + 细线串成视觉链
@@ -26,7 +26,7 @@
 | 工具库     | clsx · tailwind-merge             | —      |
 
 工具自身用到的库：`qrcode` · `diff` · `js-yaml` · `cronstrue` · `regexp-tree` ·
-`highlight.js` · `html-to-image` · `pdf-lib` · `browser-image-compression`。
+`highlight.js` · `html-to-image` · `pdf-lib` · `browser-image-compression` · `marked` · `dompurify` · `jsbarcode`。
 
 ## 🚀 快速开始
 
@@ -44,7 +44,8 @@ npm run build && npm run start
 
 | 变量                    | 默认                       | 说明                       |
 | ----------------------- | -------------------------- | -------------------------- |
-| `NEXT_PUBLIC_API_BASE`  | `/api`                     | 后端 API 地址（同源反代时无需配置） |
+| `NEXT_PUBLIC_API_BASE`       | `/api`                     | 后端 API 地址（同源反代时无需配置） |
+| `NEXT_PUBLIC_DRAWIO_EMBED_HOST` | `https://embed.diagrams.net` | 流程图编辑器地址；生产环境可替换为自托管的官方发行版。页面会请求 `offline=1` 禁用云存储功能 |
 
 优先级：**系统设置页里用户自定义的地址（存 localStorage）> 构建期 `NEXT_PUBLIC_API_BASE` > 同源 `/api`**。
 改设置即时生效，无需刷新。
@@ -55,6 +56,8 @@ npm run build && npm run start
 NEXT_PUBLIC_API_BASE=http://192.168.1.100:8000
 ```
 
+> 流程图编辑器默认使用上游托管地址，因此图表数据会发送到该编辑器主机；如需本地部署，请运行经过审核的官方发行版（例如自托管服务）并将 `NEXT_PUBLIC_DRAWIO_EMBED_HOST` 指向它。项目不会用 CSS 遮挡或删除编辑器内部的第三方归属信息。
+>
 > `NEXT_PUBLIC_` 前缀会被打包进客户端 JS，**不要放任何密钥**。
 
 ## 📁 目录结构
@@ -148,7 +151,8 @@ src/tools/<slug>/
 | M2   | 26 个工具 · shadcn 视觉 · ⌘K 命令面板 · 图片格式转换 · PDF 合并                               | ✅   |
 | M3   | 进制转换 · 文字统计 · Mock 数据 · 代码截图 · 单位换算 · 养老/贷款计算器（已上线，共 40 个） | ✅   |
 | M4   | 12 个新工具：数据转换、SQL 格式化、JSON→TS、HTTP/端口速查、二维码解析、EXIF、签名板、图片取色、批量文本、抽奖、汇率、健康计算器（已上线，共 52 个） | ✅   |
-| M5   | 工具收藏 / 最近使用 · 历史记录（已上线）；配置云同步 · PWA 离线                              | 🔄   |
+| M5   | Markdown 预览、JSON Lines、XML 格式化、CSV/TSV 表格、`.env` 编辑、UTM 链接、百分比、日期间隔、Favicon、条形码（已上线，共 71 个） | ✅   |
+| M6   | 工具收藏 / 最近使用 · 历史记录（已上线）；配置云同步 · PWA 离线                              | 🔄   |
 
 ---
 

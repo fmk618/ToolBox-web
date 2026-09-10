@@ -13,7 +13,7 @@ export const CURRENCIES = [
 
 /** Frankfurter aggregates ECB reference rates; no API key or user data needed. */
 export async function fetchRate(from: string, to: string, signal?: AbortSignal): Promise<RateResponse> {
-  const res = await fetch(`https://api.frankfurter.app/latest?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { signal });
+  const res = await fetch(`https://api.frankfurter.dev/v1/latest?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { signal });
   if (!res.ok) throw new Error(`汇率服务请求失败（HTTP ${res.status}）`);
   const data = await res.json() as RateResponse;
   if (!data.rates?.[to]) throw new Error("该货币对暂不支持");

@@ -3,9 +3,9 @@ import type { ToolMeta } from "../../lib/tools/types";
 
 export const meta: ToolMeta = {
   slug: "drawio",
-  name: "流程图 · draw.io",
+  name: "流程图编辑器",
   category: "developer",
   icon: Waypoints,
-  description: "内嵌开源 draw.io 编辑器，画流程图 / 架构图，自动存本地、可导出",
-  keywords: ["drawio", "diagrams", "流程图", "画图", "架构图", "思维导图", "uml"],
+  description: "编辑流程图、架构图和 UML 图，支持本地自动保存与导出",
+  keywords: ["diagrams", "流程图", "画图", "架构图", "思维导图", "uml"],
 };

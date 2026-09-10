@@ -25,7 +25,6 @@ import { meta as calculator } from "../../tools/calculator/meta";
 import { meta as unitConvert } from "../../tools/unit-convert/meta";
 import { meta as baseConvert } from "../../tools/base-convert/meta";
 import { meta as mockData } from "../../tools/mock-data/meta";
-import { meta as addressGen } from "../../tools/address-gen/meta";
 import { meta as codeScreenshot } from "../../tools/code-screenshot/meta";
 import { meta as codeFormat } from "../../tools/code-format/meta";
 import { meta as drawio } from "../../tools/drawio/meta";
@@ -63,6 +62,16 @@ import { meta as sqliteViewer } from "../../tools/sqlite-viewer/meta";
 import { meta as qrDecode } from "../../tools/qr-decode/meta";
 import { meta as exifTool } from "../../tools/exif-tool/meta";
 import { meta as settings } from "../../tools/settings/meta";
+import { meta as markdownPreview } from "../../tools/markdown-preview/meta";
+import { meta as jsonLines } from "../../tools/json-lines/meta";
+import { meta as xmlFormat } from "../../tools/xml-format/meta";
+import { meta as csvTable } from "../../tools/csv-table/meta";
+import { meta as envEditor } from "../../tools/env-editor/meta";
+import { meta as utmBuilder } from "../../tools/utm-builder/meta";
+import { meta as percentCalc } from "../../tools/percent-calc/meta";
+import { meta as dateDuration } from "../../tools/date-duration/meta";
+import { meta as faviconGenerator } from "../../tools/favicon-generator/meta";
+import { meta as barcodeGenerator } from "../../tools/barcode-generator/meta";
 
 export type LazyUi = () => Promise<{ default: ComponentType }>;
 export type ToolEntry = readonly [meta: ToolMeta, ui: LazyUi];
@@ -101,7 +110,6 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [unitConvert, () => import("../../tools/unit-convert/ui")],
   [baseConvert, () => import("../../tools/base-convert/ui")],
   [mockData, () => import("../../tools/mock-data/ui")],
-  [addressGen, () => import("../../tools/address-gen/ui")],
   [codeScreenshot, () => import("../../tools/code-screenshot/ui")],
   [codeFormat, () => import("../../tools/code-format/ui")],
   [drawio, () => import("../../tools/drawio/ui")],
@@ -139,6 +147,16 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [qrDecode, () => import("../../tools/qr-decode/ui")],
   [exifTool, () => import("../../tools/exif-tool/ui")],
   [settings, () => import("../../tools/settings/ui")],
+  [markdownPreview, () => import("../../tools/markdown-preview/ui")],
+  [jsonLines, () => import("../../tools/json-lines/ui")],
+  [xmlFormat, () => import("../../tools/xml-format/ui")],
+  [csvTable, () => import("../../tools/csv-table/ui")],
+  [envEditor, () => import("../../tools/env-editor/ui")],
+  [utmBuilder, () => import("../../tools/utm-builder/ui")],
+  [percentCalc, () => import("../../tools/percent-calc/ui")],
+  [dateDuration, () => import("../../tools/date-duration/ui")],
+  [faviconGenerator, () => import("../../tools/favicon-generator/ui")],
+  [barcodeGenerator, () => import("../../tools/barcode-generator/ui")],
 ];
 
 // Dev 期防呆：slug 重复 / slug ≠ 目录名时在控制台报错（生产 tree-shake 掉）。
