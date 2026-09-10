@@ -27,6 +27,7 @@ import { meta as baseConvert } from "../../tools/base-convert/meta";
 import { meta as mockData } from "../../tools/mock-data/meta";
 import { meta as addressGen } from "../../tools/address-gen/meta";
 import { meta as codeScreenshot } from "../../tools/code-screenshot/meta";
+import { meta as codeFormat } from "../../tools/code-format/meta";
 import { meta as drawio } from "../../tools/drawio/meta";
 import { meta as loanCalc } from "../../tools/loan-calc/meta";
 import { meta as pensionCalc } from "../../tools/pension-calc/meta";
@@ -102,6 +103,7 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [mockData, () => import("../../tools/mock-data/ui")],
   [addressGen, () => import("../../tools/address-gen/ui")],
   [codeScreenshot, () => import("../../tools/code-screenshot/ui")],
+  [codeFormat, () => import("../../tools/code-format/ui")],
   [drawio, () => import("../../tools/drawio/ui")],
   [loanCalc, () => import("../../tools/loan-calc/ui")],
   [pensionCalc, () => import("../../tools/pension-calc/ui")],
