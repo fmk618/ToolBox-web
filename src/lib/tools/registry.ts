@@ -34,6 +34,7 @@ import { meta as imageCompress } from "../../tools/image-compress/meta";
 import { meta as imageConvert } from "../../tools/image-convert/meta";
 import { meta as imageCrop } from "../../tools/image-crop/meta";
 import { meta as imageInpaint } from "../../tools/image-inpaint/meta";
+import { meta as gifFrames } from "../../tools/gif-frames/meta";
 import { meta as imageToIco } from "../../tools/image-to-ico/meta";
 import { meta as svgMin } from "../../tools/svg-min/meta";
 import { meta as timestamp } from "../../tools/timestamp/meta";
@@ -106,6 +107,7 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [imageConvert, () => import("../../tools/image-convert/ui")],
   [imageCrop, () => import("../../tools/image-crop/ui")],
   [imageInpaint, () => import("../../tools/image-inpaint/ui")],
+  [gifFrames, () => import("../../tools/gif-frames/ui")],
   [imageToIco, () => import("../../tools/image-to-ico/ui")],
   [svgMin, () => import("../../tools/svg-min/ui")],
   [timestamp, () => import("../../tools/timestamp/ui")],
