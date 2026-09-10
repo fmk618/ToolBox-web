@@ -50,6 +50,7 @@ import { meta as signaturePad } from "../../tools/signature-pad/meta";
 import { meta as imagePalette } from "../../tools/image-palette/meta";
 import { meta as dataConvert } from "../../tools/data-convert/meta";
 import { meta as sqlFormat } from "../../tools/sql-format/meta";
+import { meta as sqliteViewer } from "../../tools/sqlite-viewer/meta";
 import { meta as qrDecode } from "../../tools/qr-decode/meta";
 import { meta as exifTool } from "../../tools/exif-tool/meta";
 import { meta as settings } from "../../tools/settings/meta";
@@ -107,6 +108,7 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [httpRef, () => import("../../tools/http-ref/ui")],
   [dataConvert, () => import("../../tools/data-convert/ui")],
   [sqlFormat, () => import("../../tools/sql-format/ui")],
+  [sqliteViewer, () => import("../../tools/sqlite-viewer/ui")],
   [jsonToTs, () => import("../../tools/json-to-ts/ui")],
   [textBatch, () => import("../../tools/text-batch/ui")],
   [raffle, () => import("../../tools/raffle/ui")],
