@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ToolShell, ToolField } from "../../components/tools/tool-shell";
 import { CopyButton } from "../../components/tools/copy-button";
+import { DatePicker } from "../../components/tools/date-picker";
+import { ToolShell, ToolField } from "../../components/tools/tool-shell";
 import { cn } from "../../lib/utils";
 import { meta } from "./meta";
 import {
@@ -74,19 +75,17 @@ function DiffMode() {
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <ToolField label="起始日期" hint={from ? weekdayName(from) : undefined}>
-          <input
-            type="date"
+          <DatePicker
             value={fromStr}
-            onChange={(e) => setFromStr(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm dark:text-foreground"
+            onChange={setFromStr}
+            ariaLabel="起始日期"
           />
         </ToolField>
         <ToolField label="结束日期" hint={to ? weekdayName(to) : undefined}>
-          <input
-            type="date"
+          <DatePicker
             value={toStr}
-            onChange={(e) => setToStr(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm dark:text-foreground"
+            onChange={setToStr}
+            ariaLabel="结束日期"
           />
         </ToolField>
       </div>
@@ -150,11 +149,10 @@ function ShiftMode() {
   return (
     <div className="space-y-4">
       <ToolField label="基准日期" hint={base ? weekdayName(base) : undefined}>
-        <input
-          type="date"
+        <DatePicker
           value={baseStr}
-          onChange={(e) => setBaseStr(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm dark:text-foreground"
+          onChange={setBaseStr}
+          ariaLabel="基准日期"
         />
       </ToolField>
 

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ErrorBox } from "../../components/tools/error-box";
-import { TextField } from "../../components/tools/inputs";
+import { DatePicker } from "../../components/tools/date-picker";
 import { ToolField, ToolShell } from "../../components/tools/tool-shell";
 import { calculateDuration } from "./lib";
 import { meta } from "./meta";
@@ -25,8 +25,12 @@ export default function DateDurationUi() {
     <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local>
       <div className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-2">
-          <ToolField label="开始日期"><TextField type="date" value={start} onChange={(event) => setStart(event.target.value)} /></ToolField>
-          <ToolField label="结束日期"><TextField type="date" value={end} onChange={(event) => setEnd(event.target.value)} /></ToolField>
+          <ToolField label="开始日期">
+            <DatePicker value={start} onChange={setStart} ariaLabel="开始日期" />
+          </ToolField>
+          <ToolField label="结束日期">
+            <DatePicker value={end} onChange={setEnd} ariaLabel="结束日期" />
+          </ToolField>
         </div>
         {result.error ? <ErrorBox>{result.error}</ErrorBox> : result.value && (
           <div className="grid gap-3 sm:grid-cols-3">
