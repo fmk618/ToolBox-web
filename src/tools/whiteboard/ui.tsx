@@ -125,7 +125,7 @@ export default function WhiteboardUi() {
             <Download className="h-3.5 w-3.5" />
             SVG
           </Button>
-          <span className="ml-auto text-xs text-muted-foreground">数据仅在当前浏览器中处理</span>
+          <span className="ml-auto text-xs text-muted-foreground">本地处理 · 不自动保存</span>
         </div>
         {error && <ErrorBox>{error}</ErrorBox>}
         <div className="h-[min(72vh,48rem)] min-h-[32rem] overflow-hidden rounded-2xl border border-border bg-white">

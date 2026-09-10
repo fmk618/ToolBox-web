@@ -143,7 +143,7 @@ export default function SpreadsheetUi() {
             新建工作簿
           </Button>
           <span className="ml-auto text-xs text-muted-foreground">
-            {ready ? "数据仅在当前浏览器中处理" : "正在加载表格编辑器…"}
+            {ready ? "本地处理 · 不自动保存" : "正在加载表格编辑器…"}
           </span>
         </div>
         {error && <ErrorBox>{error}</ErrorBox>}

@@ -148,7 +148,7 @@ export default function MindmapUi() {
             新建导图
           </Button>
           <span className="ml-auto text-xs text-muted-foreground">
-            {ready ? "数据仅在当前浏览器中处理" : "正在加载思维导图…"}
+            {ready ? "本地处理 · 不自动保存" : "正在加载思维导图…"}
           </span>
         </div>
         {error && <ErrorBox>{error}</ErrorBox>}
