@@ -10,6 +10,7 @@ import { meta as base64 } from "../../tools/base64/meta";
 import { meta as urlCodec } from "../../tools/url-codec/meta";
 import { meta as htmlEntity } from "../../tools/html-entity/meta";
 import { meta as jsonFormat } from "../../tools/json-format/meta";
+import { meta as jsonSchema } from "../../tools/json-schema/meta";
 import { meta as jsonPath } from "../../tools/jsonpath/meta";
 import { meta as yamlJson } from "../../tools/yaml-json/meta";
 import { meta as textDiff } from "../../tools/text-diff/meta";
@@ -84,6 +85,7 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [urlCodec, () => import("../../tools/url-codec/ui")],
   [htmlEntity, () => import("../../tools/html-entity/ui")],
   [jsonFormat, () => import("../../tools/json-format/ui")],
+  [jsonSchema, () => import("../../tools/json-schema/ui")],
   [jsonPath, () => import("../../tools/jsonpath/ui")],
   [yamlJson, () => import("../../tools/yaml-json/ui")],
   [textDiff, () => import("../../tools/text-diff/ui")],
