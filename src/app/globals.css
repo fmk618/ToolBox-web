@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "cropperjs/dist/cropper.css";
 
 /* shadcn/ui-style semantic tokens, OKLCH-based for richer color */
 :root {
@@ -175,4 +176,10 @@ body {
 }
 .focus-ring:focus-visible {
   outline-color: var(--ring);
+}
+
+/* Cropper.js circular-avatar mask; the canvas export applies the same mask. */
+.image-crop-circle .cropper-view-box,
+.image-crop-circle .cropper-face {
+  border-radius: 50%;
 }
