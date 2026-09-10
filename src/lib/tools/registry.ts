@@ -32,6 +32,7 @@ import { meta as uuid } from "../../tools/uuid/meta";
 import { meta as qrcode } from "../../tools/qrcode/meta";
 import { meta as imageCompress } from "../../tools/image-compress/meta";
 import { meta as imageConvert } from "../../tools/image-convert/meta";
+import { meta as imageCrop } from "../../tools/image-crop/meta";
 import { meta as imageInpaint } from "../../tools/image-inpaint/meta";
 import { meta as imageToIco } from "../../tools/image-to-ico/meta";
 import { meta as svgMin } from "../../tools/svg-min/meta";
@@ -103,6 +104,7 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [qrcode, () => import("../../tools/qrcode/ui")],
   [imageCompress, () => import("../../tools/image-compress/ui")],
   [imageConvert, () => import("../../tools/image-convert/ui")],
+  [imageCrop, () => import("../../tools/image-crop/ui")],
   [imageInpaint, () => import("../../tools/image-inpaint/ui")],
   [imageToIco, () => import("../../tools/image-to-ico/ui")],
   [svgMin, () => import("../../tools/svg-min/ui")],
