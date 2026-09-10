@@ -4,10 +4,13 @@ import type { ToolMeta } from "./types";
 import { meta as fileConvert } from "../../tools/file-convert/meta";
 import { meta as pdfMerge } from "../../tools/pdf-merge/meta";
 import { meta as pdfSplit } from "../../tools/pdf-split/meta";
+import { meta as pdfOrganize } from "../../tools/pdf-organize/meta";
+import { meta as archiveExtract } from "../../tools/archive-extract/meta";
 import { meta as base64 } from "../../tools/base64/meta";
 import { meta as urlCodec } from "../../tools/url-codec/meta";
 import { meta as htmlEntity } from "../../tools/html-entity/meta";
 import { meta as jsonFormat } from "../../tools/json-format/meta";
+import { meta as jsonPath } from "../../tools/jsonpath/meta";
 import { meta as yamlJson } from "../../tools/yaml-json/meta";
 import { meta as textDiff } from "../../tools/text-diff/meta";
 import { meta as textStat } from "../../tools/text-stat/meta";
@@ -16,6 +19,7 @@ import { meta as hash } from "../../tools/hash/meta";
 import { meta as md5 } from "../../tools/md5/meta";
 import { meta as password } from "../../tools/password/meta";
 import { meta as jwtDecode } from "../../tools/jwt-decode/meta";
+import { meta as certInspect } from "../../tools/cert-inspect/meta";
 import { meta as calculator } from "../../tools/calculator/meta";
 import { meta as unitConvert } from "../../tools/unit-convert/meta";
 import { meta as baseConvert } from "../../tools/base-convert/meta";
@@ -30,12 +34,15 @@ import { meta as uuid } from "../../tools/uuid/meta";
 import { meta as qrcode } from "../../tools/qrcode/meta";
 import { meta as imageCompress } from "../../tools/image-compress/meta";
 import { meta as imageConvert } from "../../tools/image-convert/meta";
+import { meta as imageCrop } from "../../tools/image-crop/meta";
 import { meta as imageInpaint } from "../../tools/image-inpaint/meta";
+import { meta as gifFrames } from "../../tools/gif-frames/meta";
 import { meta as imageToIco } from "../../tools/image-to-ico/meta";
 import { meta as svgMin } from "../../tools/svg-min/meta";
 import { meta as timestamp } from "../../tools/timestamp/meta";
 import { meta as timezone } from "../../tools/timezone/meta";
 import { meta as dateCalc } from "../../tools/date-calc/meta";
+import { meta as icsGenerate } from "../../tools/ics-generate/meta";
 import { meta as pomodoro } from "../../tools/pomodoro/meta";
 import { meta as cronParse } from "../../tools/cron-parse/meta";
 import { meta as netLookup } from "../../tools/net-lookup/meta";
@@ -51,6 +58,7 @@ import { meta as signaturePad } from "../../tools/signature-pad/meta";
 import { meta as imagePalette } from "../../tools/image-palette/meta";
 import { meta as dataConvert } from "../../tools/data-convert/meta";
 import { meta as sqlFormat } from "../../tools/sql-format/meta";
+import { meta as sqliteViewer } from "../../tools/sqlite-viewer/meta";
 import { meta as qrDecode } from "../../tools/qr-decode/meta";
 import { meta as exifTool } from "../../tools/exif-tool/meta";
 import { meta as settings } from "../../tools/settings/meta";
@@ -71,10 +79,13 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [fileConvert, () => import("../../tools/file-convert/ui")],
   [pdfMerge, () => import("../../tools/pdf-merge/ui")],
   [pdfSplit, () => import("../../tools/pdf-split/ui")],
+  [pdfOrganize, () => import("../../tools/pdf-organize/ui")],
+  [archiveExtract, () => import("../../tools/archive-extract/ui")],
   [base64, () => import("../../tools/base64/ui")],
   [urlCodec, () => import("../../tools/url-codec/ui")],
   [htmlEntity, () => import("../../tools/html-entity/ui")],
   [jsonFormat, () => import("../../tools/json-format/ui")],
+  [jsonPath, () => import("../../tools/jsonpath/ui")],
   [yamlJson, () => import("../../tools/yaml-json/ui")],
   [textDiff, () => import("../../tools/text-diff/ui")],
   [textStat, () => import("../../tools/text-stat/ui")],
@@ -83,6 +94,7 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [md5, () => import("../../tools/md5/ui")],
   [password, () => import("../../tools/password/ui")],
   [jwtDecode, () => import("../../tools/jwt-decode/ui")],
+  [certInspect, () => import("../../tools/cert-inspect/ui")],
   [calculator, () => import("../../tools/calculator/ui")],
   [unitConvert, () => import("../../tools/unit-convert/ui")],
   [baseConvert, () => import("../../tools/base-convert/ui")],
@@ -97,18 +109,22 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [qrcode, () => import("../../tools/qrcode/ui")],
   [imageCompress, () => import("../../tools/image-compress/ui")],
   [imageConvert, () => import("../../tools/image-convert/ui")],
+  [imageCrop, () => import("../../tools/image-crop/ui")],
   [imageInpaint, () => import("../../tools/image-inpaint/ui")],
+  [gifFrames, () => import("../../tools/gif-frames/ui")],
   [imageToIco, () => import("../../tools/image-to-ico/ui")],
   [svgMin, () => import("../../tools/svg-min/ui")],
   [timestamp, () => import("../../tools/timestamp/ui")],
   [timezone, () => import("../../tools/timezone/ui")],
   [dateCalc, () => import("../../tools/date-calc/ui")],
+  [icsGenerate, () => import("../../tools/ics-generate/ui")],
   [pomodoro, () => import("../../tools/pomodoro/ui")],
   [cronParse, () => import("../../tools/cron-parse/ui")],
   [netLookup, () => import("../../tools/net-lookup/ui")],
   [httpRef, () => import("../../tools/http-ref/ui")],
   [dataConvert, () => import("../../tools/data-convert/ui")],
   [sqlFormat, () => import("../../tools/sql-format/ui")],
+  [sqliteViewer, () => import("../../tools/sqlite-viewer/ui")],
   [jsonToTs, () => import("../../tools/json-to-ts/ui")],
   [textBatch, () => import("../../tools/text-batch/ui")],
   [raffle, () => import("../../tools/raffle/ui")],
