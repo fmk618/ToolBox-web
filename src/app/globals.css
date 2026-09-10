@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "cropperjs/dist/cropper.css";
+/* Turbopack does not resolve Excalidraw's style condition, so use its pinned production CSS. */
 @import "../../node_modules/@excalidraw/excalidraw/dist/prod/index.css";
 @import "@univerjs/preset-sheets-core/lib/index.css";
 @import "mind-elixir/style";
