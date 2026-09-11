@@ -58,6 +58,66 @@ export async function testLLMSettings(
   return res.json();
 }
 
+export type MindmapOperation = "replace" | "append" | "refine";
+export type MindmapTemplate =
+  | "project-plan"
+  | "meeting-notes"
+  | "study-notes"
+  | "swot"
+  | "product-roadmap"
+  | "org-chart"
+  | "research-report"
+  | "course-outline";
+
+export type MindmapGenerateBody = {
+  prompt: string;
+  operation: MindmapOperation;
+  template: MindmapTemplate;
+  direction: "right" | "left" | "side" | "down";
+  compact: boolean;
+  selected_node_id?: string;
+  current_data?: unknown;
+  provider: string;
+  model: string;
+  api_key: string;
+};
+
+export type MindmapGenerateResponse = {
+  operation: MindmapOperation;
+  template: MindmapTemplate;
+  direction: MindmapGenerateBody["direction"];
+  data: unknown;
+  node_count: number;
+};
+
+export async function generateMindmap(
+  body: MindmapGenerateBody,
+  signal?: AbortSignal,
+): Promise<MindmapGenerateResponse> {
+  const res = await fetch(`${getApiBase()}/tools/mindmap/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) throw new Error(await readErrorMessage(res.status, res));
+  return res.json();
+}
+
+export type MindmapTemplateOption = {
+  id: MindmapTemplate;
+  label: string;
+  description: string;
+};
+
+export async function fetchMindmapTemplates(): Promise<MindmapTemplateOption[]> {
+  const res = await fetch(`${getApiBase()}/tools/mindmap/templates`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(await readErrorMessage(res.status, res));
+  return res.json();
+}
+
 export async function fetchRoutes(): Promise<Routes> {
   const res = await fetch(`${getApiBase()}/tools/file-convert/routes`, {
     cache: "no-store",

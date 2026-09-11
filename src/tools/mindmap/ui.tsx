@@ -4,6 +4,7 @@ import type { ChangeEvent } from "react";
 import type { MindElixirData, MindElixirInstance, NodeObj, Theme } from "mind-elixir";
 import {
   Bold,
+  Bot,
   Check,
   CircleHelp,
   Columns2,
@@ -22,6 +23,7 @@ import {
   MoveDown,
   MoveUp,
   Paintbrush,
+  PanelLeft,
   PanelRight,
   Pencil,
   Pin,
@@ -29,7 +31,11 @@ import {
   Redo2,
   Rocket,
   RotateCcw,
+  RotateCw,
   Search,
+  Send,
+  ShieldCheck,
+  Sparkles,
   Star,
   StickyNote,
   Tag,
@@ -37,6 +43,7 @@ import {
   TriangleAlert,
   Underline,
   Undo2,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../../components/tools/button";
@@ -46,6 +53,12 @@ import { TextArea, TextField } from "../../components/tools/inputs";
 import { Select } from "../../components/tools/select";
 import { ToolShell } from "../../components/tools/tool-shell";
 import { downloadBlob, downloadText } from "../../lib/download";
+import {
+  generateMindmap,
+  type MindmapOperation,
+  type MindmapTemplate,
+} from "../../lib/api";
+import { loadLLMConfig } from "../../lib/llm-config";
 import { meta } from "./meta";
 import {
   colorInputValue,
@@ -91,6 +104,23 @@ const themeOptions = [
   { value: "dark", label: "深色夜间" },
   { value: "contrast", label: "高对比度" },
   { value: "square", label: "方形卡片" },
+];
+
+const aiTemplateOptions: { value: MindmapTemplate; label: string; description: string }[] = [
+  { value: "project-plan", label: "项目计划", description: "目标、阶段、任务和风险" },
+  { value: "meeting-notes", label: "会议纪要", description: "议题、结论、行动项和负责人" },
+  { value: "study-notes", label: "学习笔记", description: "概念、重点、例子和复习路径" },
+  { value: "swot", label: "SWOT 分析", description: "优势、劣势、机会和威胁" },
+  { value: "product-roadmap", label: "产品路线图", description: "愿景、版本、里程碑和交付" },
+  { value: "org-chart", label: "组织结构", description: "部门、角色、职责和汇报关系" },
+  { value: "research-report", label: "研究报告", description: "问题、方法、证据、结论和局限" },
+  { value: "course-outline", label: "课程大纲", description: "章节、知识点、练习和作业" },
+];
+
+const aiOperationOptions = [
+  { value: "replace" as MindmapOperation, label: "生成新导图" },
+  { value: "append" as MindmapOperation, label: "追加到选中节点" },
+  { value: "refine" as MindmapOperation, label: "整理当前导图" },
 ];
 
 function directionForInstance(instance: MindElixirInstance, direction: DirectionId) {
@@ -143,6 +173,21 @@ export default function MindmapUi() {
   const [direction, setDirection] = useState<DirectionId>("right");
   const [compact, setCompact] = useState(false);
   const [query, setQuery] = useState("");
+  const [leftPanelOpen, setLeftPanelOpen] = useState(false);
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiOperation, setAiOperation] = useState<MindmapOperation>("replace");
+  const [aiTemplate, setAiTemplate] = useState<MindmapTemplate>("project-plan");
+  const [aiDirection, setAiDirection] = useState<DirectionId>("right");
+  const [aiCompact, setAiCompact] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiPreview, setAiPreview] = useState<MindElixirData | null>(null);
+  const [aiPreviewCount, setAiPreviewCount] = useState(0);
+  const aiAbortRef = useRef<AbortController | null>(null);
+  const aiUndoSnapshotRef = useRef<MindElixirData | null>(null);
+  const aiRedoSnapshotRef = useRef<MindElixirData | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [linkDraft, setLinkDraft] = useState("");
   const [tagsDraft, setTagsDraft] = useState("");
@@ -282,6 +327,7 @@ export default function MindmapUi() {
     });
     return () => {
       mountedRef.current = false;
+      aiAbortRef.current?.abort();
       detachBusRef.current?.();
       instanceRef.current?.destroy();
       instanceRef.current = null;
@@ -328,22 +374,65 @@ export default function MindmapUi() {
   };
 
   const toggleExpanded = (expand?: boolean) => {
-    runNodeAction((instance, node) => {
+    runNodeAction((instance, selectedTopic) => {
+      let node = selectedTopic;
+      try {
+        node = instance.findEle(selectedTopic.nodeObj.id);
+      } catch {
+        setError("当前节点已不在画布中，请重新选择后再操作。");
+        return;
+      }
+
       if (!node.nodeObj.children?.length) {
         setError("当前节点没有子节点可折叠或展开。");
         return;
       }
-      const next = expand ?? node.nodeObj.expanded === false;
+      if (node.nodeObj.id === instance.nodeData.id) {
+        setError("根节点不支持折叠或展开。");
+        return;
+      }
+
+      const expander = node.parentNode?.children?.[1];
+      if (!expander || expander.tagName !== "ME-EPD") {
+        setError("当前节点的折叠控件不可用，请重新选择节点。");
+        return;
+      }
+
+      const isExpanded = node.nodeObj.expanded !== false;
+      const next = expand ?? !isExpanded;
+      if (next === isExpanded) return;
+
       instance.expandNode(node, next);
+      syncSnapshot(instance);
     });
   };
 
   const undo = () => {
-    instanceRef.current?.undo();
+    const instance = instanceRef.current;
+    if (!instance) return;
+    if (aiUndoSnapshotRef.current) {
+      aiRedoSnapshotRef.current = instance.getData();
+      const previous = aiUndoSnapshotRef.current;
+      aiUndoSnapshotRef.current = null;
+      instance.refresh(previous);
+      syncSnapshot(instance);
+    } else {
+      instance.undo();
+    }
     setError("");
   };
   const redo = () => {
-    instanceRef.current?.redo();
+    const instance = instanceRef.current;
+    if (!instance) return;
+    if (aiRedoSnapshotRef.current) {
+      aiUndoSnapshotRef.current = instance.getData();
+      const next = aiRedoSnapshotRef.current;
+      aiRedoSnapshotRef.current = null;
+      instance.refresh(next);
+      syncSnapshot(instance);
+    } else {
+      instance.redo();
+    }
     setError("");
   };
   const fitCanvas = () => {
@@ -421,15 +510,31 @@ export default function MindmapUi() {
     const instance = instanceRef.current;
     if (!instance) return;
     try {
-      const path = ancestorIds(snapshot?.nodeData, id) ?? [];
+      const path = ancestorIds(instance.nodeData, id) ?? ancestorIds(snapshot?.nodeData, id);
+      if (!path) {
+        setError("无法定位这个节点，它可能已经被删除或不在当前视图中。");
+        return;
+      }
+
+      let needsRefresh = false;
       path.slice(0, -1).forEach((ancestorId) => {
         const ancestor = nodeFromRoot(instance.nodeData, ancestorId);
-        if (ancestor?.children?.length) ancestor.expanded = true;
+        if (ancestor?.children?.length && ancestor.expanded === false) {
+          ancestor.expanded = true;
+          needsRefresh = true;
+        }
       });
-      if (path.length > 1) instance.refresh();
-      const topic = instance.findEle(id);
+      if (needsRefresh) instance.refresh();
+
+      let topic: NonNullable<MindElixirInstance["currentNode"]>;
+      try {
+        topic = instance.findEle(id);
+      } catch {
+        setError("无法定位这个节点，它可能已经被删除或不在当前视图中。");
+        return;
+      }
       instance.selectNode(topic);
-      instance.focusNode(topic);
+      instance.scrollIntoView(topic, true);
       setSelectedIds([id]);
       syncSnapshot(instance);
       setError("");
@@ -485,48 +590,136 @@ export default function MindmapUi() {
     }
   };
 
+  const applyAiPreview = () => {
+    const instance = instanceRef.current;
+    if (!instance || !aiPreview || !isSafeMindMapData(aiPreview)) {
+      setAiError("没有可应用的安全预览结果。");
+      return;
+    }
+    aiUndoSnapshotRef.current = instance.getData();
+    aiRedoSnapshotRef.current = null;
+    instance.refresh(aiPreview);
+    syncSnapshot(instance);
+    setSelectedIds([]);
+    setAiPreview(null);
+    setAiError("");
+    setAiOpen(false);
+  };
+
+  const openAiAssistant = () => {
+    setAiDirection(direction);
+    setAiCompact(compact);
+    setAiError("");
+    setAiOpen(true);
+  };
+
+  const cancelAiGeneration = () => {
+    aiAbortRef.current?.abort();
+    aiAbortRef.current = null;
+    setAiBusy(false);
+  };
+
+  const generateWithAi = async () => {
+    const prompt = aiPrompt.trim();
+    if (!prompt) {
+      setAiError("请先描述你想绘制或修改的内容。");
+      return;
+    }
+    const config = loadLLMConfig();
+    if (!config?.provider || !config.model || !config.api_key) {
+      setAiError("请先在系统设置中配置 provider、模型和 API Key。");
+      return;
+    }
+    if (aiOperation === "append" && !selectedNode) {
+      setAiError("追加操作需要先在画布中选中一个节点。");
+      return;
+    }
+    aiAbortRef.current?.abort();
+    const controller = new AbortController();
+    aiAbortRef.current = controller;
+    setAiBusy(true);
+    setAiError("");
+    setAiPreview(null);
+    try {
+      const response = await generateMindmap(
+        {
+          prompt,
+          operation: aiOperation,
+          template: aiTemplate,
+          direction: aiDirection,
+          compact: aiCompact,
+          selected_node_id: aiOperation === "append" ? selectedNode?.id : undefined,
+          current_data: aiOperation === "replace" ? undefined : snapshot,
+          provider: config.provider,
+          model: config.model,
+          api_key: config.api_key,
+        },
+        controller.signal,
+      );
+      if (!isSafeMindMapData(response.data)) {
+        throw new Error("模型返回的导图未通过安全校验。");
+      }
+      setAiPreview(response.data);
+      setAiPreviewCount(response.node_count);
+    } catch (cause) {
+      if (cause instanceof DOMException && cause.name === "AbortError") return;
+      setAiError(cause instanceof Error ? cause.message : "AI 生成失败，请稍后重试。");
+    } finally {
+      if (aiAbortRef.current === controller) {
+        aiAbortRef.current = null;
+        setAiBusy(false);
+      }
+    }
+  };
+
   const style = selectedNode?.style;
   const disabled = !ready;
 
   return (
     <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local wide>
-      <div className="flex h-[calc(100dvh-13rem)] min-h-[620px] flex-col gap-2.5">
+      <div className="flex h-[calc(100dvh-13rem)] min-h-[560px] flex-col gap-2.5">
         <input ref={inputRef} type="file" accept=".json,application/json" onChange={importMindmap} className="sr-only" />
-        <div className="space-y-2 rounded-xl border border-border bg-card/95 p-2.5 shadow-sm backdrop-blur-sm">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-muted-foreground">文件</span>
-            <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={disabled} aria-label="导入思维导图快照"><FileUp className="h-3.5 w-3.5" />导入</Button>
-            <Button variant="outline" size="sm" onClick={exportJson} disabled={disabled} aria-label="导出 JSON"><FileDown className="h-3.5 w-3.5" />JSON</Button>
-            <Button variant="outline" size="sm" onClick={() => exportOutline("markdown")} disabled={disabled} aria-label="导出 Markdown 大纲"><FileText className="h-3.5 w-3.5" />Markdown</Button>
-            <Button variant="outline" size="sm" onClick={() => exportOutline("text")} disabled={disabled} aria-label="导出纯文本大纲"><FileOutput className="h-3.5 w-3.5" />文本</Button>
-            <Button variant="outline" size="sm" onClick={() => void exportImage("svg")} disabled={disabled}>SVG</Button>
-            <Button variant="outline" size="sm" onClick={() => void exportImage("png")} disabled={disabled}>PNG</Button>
-            <Button variant="outline" size="sm" onClick={() => void resetMindmap()} disabled={disabled}><RotateCcw className="h-3.5 w-3.5" />新建</Button>
-            <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
-            <span className="text-xs font-semibold text-muted-foreground">编辑</span>
-            <Button variant="outline" size="sm" onClick={undo} disabled={disabled} aria-label="撤销"><Undo2 className="h-3.5 w-3.5" />撤销</Button>
-            <Button variant="outline" size="sm" onClick={redo} disabled={disabled} aria-label="重做"><Redo2 className="h-3.5 w-3.5" />重做</Button>
-            <Button variant="outline" size="sm" onClick={fitCanvas} disabled={disabled}><LocateFixed className="h-3.5 w-3.5" />适应画布</Button>
-            <span className="ml-auto text-xs text-muted-foreground">{ready ? "本地处理 · 不自动保存" : "正在加载思维导图…"}</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2">
-            <span className="text-xs font-semibold text-muted-foreground">结构</span>
-            <Button variant="outline" size="sm" onClick={addChild} disabled={disabled}><Plus className="h-3.5 w-3.5" />子节点</Button>
-            <Button variant="outline" size="sm" onClick={addSibling} disabled={disabled}><GitBranch className="h-3.5 w-3.5" />同级</Button>
-            <Button variant="outline" size="sm" onClick={addParent} disabled={disabled}><Plus className="h-3.5 w-3.5" />父节点</Button>
-            <Button variant="outline" size="sm" onClick={editNode} disabled={disabled}><Pencil className="h-3.5 w-3.5" />编辑主题</Button>
-            <Button variant="outline" size="sm" onClick={moveUp} disabled={disabled} aria-label="节点上移"><MoveUp className="h-3.5 w-3.5" />上移</Button>
-            <Button variant="outline" size="sm" onClick={moveDown} disabled={disabled} aria-label="节点下移"><MoveDown className="h-3.5 w-3.5" />下移</Button>
-            <Button variant="outline" size="sm" onClick={() => toggleExpanded(false)} disabled={disabled}><FoldVertical className="h-3.5 w-3.5" />折叠</Button>
-            <Button variant="outline" size="sm" onClick={() => toggleExpanded(true)} disabled={disabled}><Expand className="h-3.5 w-3.5" />展开</Button>
-            <Button variant="destructive" size="sm" onClick={removeNode} disabled={disabled}><Trash2 className="h-3.5 w-3.5" />删除</Button>
-          </div>
+        <div className="flex flex-wrap items-center gap-1.5 border border-border bg-background px-2 py-2">
+          <span className="px-1 text-xs font-semibold text-muted-foreground">文件</span>
+          <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={disabled} aria-label="导入思维导图快照"><FileUp className="h-3.5 w-3.5" />导入</Button>
+          <Button variant="outline" size="sm" onClick={exportJson} disabled={disabled} aria-label="导出 JSON"><FileDown className="h-3.5 w-3.5" />JSON</Button>
+          <Button variant="outline" size="sm" onClick={() => exportOutline("markdown")} disabled={disabled} aria-label="导出 Markdown 大纲"><FileText className="h-3.5 w-3.5" />Markdown</Button>
+          <Button variant="outline" size="sm" onClick={() => exportOutline("text")} disabled={disabled} aria-label="导出纯文本大纲"><FileOutput className="h-3.5 w-3.5" />文本</Button>
+          <Button variant="outline" size="sm" onClick={() => void exportImage("svg")} disabled={disabled}>SVG</Button>
+          <Button variant="outline" size="sm" onClick={() => void exportImage("png")} disabled={disabled}>PNG</Button>
+          <Button variant="outline" size="sm" onClick={() => void resetMindmap()} disabled={disabled}><RotateCcw className="h-3.5 w-3.5" />新建</Button>
+          <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
+          <span className="px-1 text-xs font-semibold text-muted-foreground">编辑</span>
+          <Button variant="outline" size="sm" onClick={undo} disabled={disabled} aria-label="撤销"><Undo2 className="h-3.5 w-3.5" />撤销</Button>
+          <Button variant="outline" size="sm" onClick={redo} disabled={disabled} aria-label="重做"><Redo2 className="h-3.5 w-3.5" />重做</Button>
+          <Button variant="outline" size="sm" onClick={fitCanvas} disabled={disabled}><LocateFixed className="h-3.5 w-3.5" />适应画布</Button>
+          <Button variant="primary" size="sm" onClick={openAiAssistant} disabled={disabled}><Sparkles className="h-3.5 w-3.5" />AI 助手</Button>
+          <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
+          <span className="px-1 text-xs font-semibold text-muted-foreground">结构</span>
+          <Button variant="outline" size="sm" onClick={addChild} disabled={disabled}><Plus className="h-3.5 w-3.5" />子节点</Button>
+          <Button variant="outline" size="sm" onClick={addSibling} disabled={disabled}><GitBranch className="h-3.5 w-3.5" />同级</Button>
+          <Button variant="outline" size="sm" onClick={addParent} disabled={disabled}><Plus className="h-3.5 w-3.5" />父节点</Button>
+          <Button variant="outline" size="sm" onClick={editNode} disabled={disabled}><Pencil className="h-3.5 w-3.5" />编辑主题</Button>
+          <Button variant="outline" size="sm" onClick={moveUp} disabled={disabled} aria-label="节点上移"><MoveUp className="h-3.5 w-3.5" />上移</Button>
+          <Button variant="outline" size="sm" onClick={moveDown} disabled={disabled} aria-label="节点下移"><MoveDown className="h-3.5 w-3.5" />下移</Button>
+          <Button variant="outline" size="sm" onClick={() => toggleExpanded(false)} disabled={disabled}><FoldVertical className="h-3.5 w-3.5" />折叠</Button>
+          <Button variant="outline" size="sm" onClick={() => toggleExpanded(true)} disabled={disabled}><Expand className="h-3.5 w-3.5" />展开</Button>
+          <Button variant="destructive" size="sm" onClick={removeNode} disabled={disabled}><Trash2 className="h-3.5 w-3.5" />删除</Button>
+          <span className="mx-1 hidden h-5 w-px bg-border xl:block" />
+          <Button variant="outline" size="sm" onClick={() => setLeftPanelOpen((open) => !open)} className="xl:hidden" aria-expanded={leftPanelOpen}><PanelLeft className="h-3.5 w-3.5" />外观</Button>
+          <Button variant="outline" size="sm" onClick={() => setRightPanelOpen((open) => !open)} className="xl:hidden" aria-expanded={rightPanelOpen}><PanelRight className="h-3.5 w-3.5" />检查</Button>
+          <span className="ml-auto px-1 text-[11px] text-muted-foreground">{ready ? "本地处理 · 多选用于结构重排 · 不自动保存" : "正在加载思维导图…"}</span>
         </div>
 
         {error && <ErrorBox>{error}</ErrorBox>}
 
-        <div className="grid min-h-0 flex-1 gap-2.5 lg:grid-cols-[220px_minmax(0,1fr)_340px]">
-          <aside className="order-2 min-h-0 overflow-y-auto rounded-xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur-sm lg:order-1">
+        <div className="mindmap-editor relative min-h-0 flex-1 overflow-hidden border border-border bg-background">
+          <div className="grid h-full min-h-0 xl:grid-cols-[200px_minmax(0,1fr)_280px]">
+          <aside className={`z-20 min-h-0 overflow-y-auto border-r border-border bg-background p-3 xl:relative xl:z-auto xl:block xl:overflow-y-auto xl:shadow-none ${leftPanelOpen ? "absolute inset-y-0 left-0 block w-[min(19rem,calc(100%-1rem))] shadow-xl" : "hidden"}`}>
+            <div className="mb-3 flex items-center justify-between xl:hidden">
+              <span className="text-sm font-semibold">画布与外观</span>
+              <Button variant="ghost" size="sm" onClick={() => setLeftPanelOpen(false)} aria-label="关闭画布与外观面板"><X className="h-4 w-4" /></Button>
+            </div>
             <div className="space-y-4">
               <section className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-semibold"><Paintbrush className="h-4 w-4" />画布与节点</div>
@@ -545,8 +738,12 @@ export default function MindmapUi() {
               </section>
             </div>
           </aside>
-          <div ref={containerRef} aria-label="思维导图画布，可拖拽并框选节点" className="order-1 min-h-[420px] overflow-hidden rounded-xl border border-border bg-background shadow-inner lg:order-2" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(100, 116, 139, 0.18) 1px, transparent 0)", backgroundSize: "18px 18px" }} />
-          <aside className="order-3 min-h-0 overflow-y-auto rounded-xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur-sm">
+          <div ref={containerRef} aria-label="思维导图画布，可拖拽并框选节点" className="mindmap-canvas min-h-0 min-w-0 bg-background" />
+          <aside className={`z-20 min-h-0 overflow-y-auto border-l border-border bg-background p-3 xl:relative xl:z-auto xl:block xl:overflow-y-auto xl:shadow-none ${rightPanelOpen ? "absolute inset-y-0 right-0 block w-[min(22rem,calc(100%-1rem))] shadow-xl" : "hidden"}`}>
+            <div className="mb-3 flex items-center justify-between xl:hidden">
+              <span className="text-sm font-semibold">节点检查器</span>
+              <Button variant="ghost" size="sm" onClick={() => setRightPanelOpen(false)} aria-label="关闭节点检查器"><X className="h-4 w-4" /></Button>
+            </div>
             <div className="space-y-4">
               <section className="space-y-2 border-t border-border pt-3">
                 <div className="flex items-center gap-2 text-sm font-semibold"><PanelRight className="h-4 w-4" />节点样式</div>
@@ -597,7 +794,92 @@ export default function MindmapUi() {
               </section>
             </div>
           </aside>
+          </div>
         </div>
+        {aiOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget && !aiBusy) setAiOpen(false);
+            }}
+          >
+            <section
+              className="flex max-h-[min(780px,calc(100dvh-2rem))] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="mindmap-ai-title"
+            >
+              <header className="flex items-center justify-between border-b border-border px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-5 w-5 text-brand" />
+                  <div>
+                    <h2 id="mindmap-ai-title" className="text-sm font-semibold">AI 思维导图助手</h2>
+                    <p className="text-xs text-muted-foreground">自然语言生成，先预览再应用</p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setAiOpen(false)} disabled={aiBusy} aria-label="关闭 AI 助手"><X className="h-4 w-4" /></Button>
+              </header>
+
+              <div className="min-h-0 space-y-4 overflow-y-auto p-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Select value={aiOperation} onChange={(value) => { setAiOperation(value as MindmapOperation); setAiPreview(null); }} options={aiOperationOptions} ariaLabel="选择 AI 操作" />
+                  <Select value={aiTemplate} onChange={(value) => { setAiTemplate(value as MindmapTemplate); setAiPreview(null); }} options={aiTemplateOptions.map(({ value, label }) => ({ value, label }))} ariaLabel="选择思维导图模板" />
+                </div>
+                <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                  {aiTemplateOptions.find(({ value }) => value === aiTemplate)?.description}
+                  {aiOperation === "append" && <span className="ml-2 font-medium text-foreground">{selectedNode ? `当前追加到：${selectedNode.topic}` : "请先选中一个节点"}</span>}
+                  {aiOperation !== "replace" && <span className="ml-2">当前导图内容会发送给已配置的模型。</span>}
+                </div>
+                <TextArea
+                  value={aiPrompt}
+                  onChange={(event) => setAiPrompt(event.target.value)}
+                  placeholder={aiOperation === "append" ? "例如：补充验收标准、风险和负责人…" : "例如：绘制一个网站发布计划，包含阶段、任务、负责人和风险…"}
+                  rows={5}
+                  mono={false}
+                  maxLength={8000}
+                  aria-label="描述要生成的思维导图"
+                />
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                  <Segmented value={aiDirection} onChange={(value) => setAiDirection(value as DirectionId)} options={directionOptions} className="grid grid-cols-2" />
+                  <Button variant={aiCompact ? "primary" : "outline"} size="sm" onClick={() => setAiCompact((value) => !value)}><Columns2 className="h-3.5 w-3.5" />{aiCompact ? "紧凑" : "宽松"}</Button>
+                </div>
+                <div className="flex items-start gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                  <span>模型只返回受限的节点结构。API Key 复用系统设置中的本地配置，不会写入导图或 URL；应用前可取消。</span>
+                </div>
+                {aiError && <ErrorBox>{aiError}</ErrorBox>}
+
+                {aiPreview && (
+                  <div className="space-y-2 rounded-lg border border-brand/40 bg-brand/5 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4" />生成预览</div>
+                      <span className="text-xs text-muted-foreground">{aiPreviewCount} 个节点</span>
+                    </div>
+                    <div className="max-h-44 overflow-y-auto rounded-md border border-border bg-background p-2">
+                      {flattenNodes(aiPreview.nodeData).slice(0, 30).map(({ node, depth, path }) => (
+                        <div key={node.id} className="flex gap-2 py-1 text-xs" style={{ paddingLeft: `${depth * 14}px` }}>
+                          <span className="shrink-0 text-muted-foreground">{path}</span>
+                          <span className="truncate">{node.topic}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3">
+                {aiBusy ? (
+                  <Button variant="outline" size="sm" onClick={cancelAiGeneration}><X className="h-3.5 w-3.5" />取消生成</Button>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setAiPreview(null)} disabled={!aiPreview}><RotateCw className="h-3.5 w-3.5" />清除预览</Button>
+                )}
+                <Button variant="outline" size="sm" onClick={() => void generateWithAi()} disabled={aiBusy || !aiPrompt.trim()}><Send className="h-3.5 w-3.5" />{aiPreview ? "重新生成" : "生成预览"}</Button>
+                <Button variant="primary" size="sm" onClick={applyAiPreview} disabled={aiBusy || !aiPreview}><Check className="h-3.5 w-3.5" />应用到画布</Button>
+              </footer>
+            </section>
+          </div>
+        )}
       </div>
     </ToolShell>
   );
