@@ -44,12 +44,17 @@ export default function SpreadsheetUi() {
 
     const setup = async () => {
       try {
-        const [{ createUniver }, { UniverSheetsCorePreset }] = await Promise.all([
-          import("@univerjs/presets"),
-          import("@univerjs/preset-sheets-core"),
-        ]);
+        const [{ createUniver }, { UniverSheetsCorePreset }, { default: zhCN }, { LocaleType }] =
+          await Promise.all([
+            import("@univerjs/presets"),
+            import("@univerjs/preset-sheets-core"),
+            import("@univerjs/preset-sheets-core/locales/zh-CN"),
+            import("@univerjs/core"),
+          ]);
         if (cancelled || !containerRef.current) return;
         const runtime = createUniver({
+          locale: LocaleType.ZH_CN,
+          locales: { [LocaleType.ZH_CN]: zhCN },
           presets: [
             UniverSheetsCorePreset({
               container: containerRef.current,

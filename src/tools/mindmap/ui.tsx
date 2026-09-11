@@ -11,6 +11,13 @@ import { meta } from "./meta";
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 
+function hasUnsafeHtml(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const node = value as { children?: unknown; dangerouslySetInnerHTML?: unknown };
+  if (Object.prototype.hasOwnProperty.call(node, "dangerouslySetInnerHTML")) return true;
+  return Array.isArray(node.children) && node.children.some(hasUnsafeHtml);
+}
+
 function isMindMapData(value: unknown): value is MindElixirData {
   if (!value || typeof value !== "object") return false;
   const data = value as Partial<MindElixirData>;
@@ -102,6 +109,9 @@ export default function MindmapUi() {
     try {
       const data: unknown = JSON.parse(await file.text());
       if (!isMindMapData(data)) throw new Error("文件不是有效的思维导图快照。");
+      if (hasUnsafeHtml(data.nodeData)) {
+        throw new Error("不支持包含自定义 HTML 的思维导图节点。");
+      }
       instance.refresh(data);
       instance.clearHistory?.();
       setError("");
