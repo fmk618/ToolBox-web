@@ -4,6 +4,9 @@ import { GeistMono } from "geist/font/mono";
 import { Shell } from "../components/shell/shell";
 import { BRAND_DESCRIPTION, BRAND_NAME } from "../lib/brand";
 import "./globals.css";
+import "@excalidraw/excalidraw/index.css";
+import "@univerjs/preset-sheets-core/lib/index.css";
+import "mind-elixir/style";
 
 export const metadata: Metadata = {
   title: {
