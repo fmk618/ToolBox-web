@@ -178,6 +178,17 @@ body {
   outline-color: var(--ring);
 }
 
+/* Mind map workspace — keep the grid visible without competing with the editor. */
+.mindmap-editor {
+  --mindmap-grid-dot: color-mix(in oklch, var(--muted-foreground) 22%, transparent);
+}
+.mindmap-canvas {
+  min-height: 0;
+  overflow: hidden;
+  background-image: radial-gradient(circle at 1px 1px, var(--mindmap-grid-dot) 1px, transparent 0);
+  background-size: 18px 18px;
+}
+
 /* Cropper.js circular-avatar mask; the canvas export applies the same mask. */
 .image-crop-circle .cropper-view-box,
 .image-crop-circle .cropper-face {
