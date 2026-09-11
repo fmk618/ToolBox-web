@@ -1,7 +1,19 @@
 "use client";
 
-import type { MindElixirData, MindElixirInstance } from "mind-elixir";
-import { Download, FileDown, FileUp, RotateCcw } from "lucide-react";
+import type { MindElixirData, MindElixirInstance, Topic } from "mind-elixir";
+import {
+  Download,
+  FileDown,
+  FileUp,
+  GitBranch,
+  LocateFixed,
+  Pencil,
+  Plus,
+  Redo2,
+  RotateCcw,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../components/tools/button";
 import { ErrorBox } from "../../components/tools/error-box";
@@ -75,6 +87,72 @@ export default function MindmapUi() {
     const { default: MindElixir } = await import("mind-elixir");
     instance.refresh(MindElixir.new("中心主题"));
     instance.clearHistory?.();
+    setError("");
+  };
+
+  const runNodeAction = (action: (instance: MindElixirInstance, node: Topic) => Promise<void>) => {
+    const instance = instanceRef.current;
+    const node = instance?.currentNode;
+    if (!instance || !node) {
+      setError("请先点击选择一个节点。你也可以双击节点直接编辑。");
+      return;
+    }
+
+    setError("");
+    void action(instance, node).catch((cause) => {
+      setError(cause instanceof Error ? cause.message : "节点操作失败。");
+    });
+  };
+
+  const addChild = () => {
+    runNodeAction((instance, node) => instance.addChild(node));
+  };
+
+  const addSibling = () => {
+    runNodeAction((instance, node) => instance.insertSibling("after", node));
+  };
+
+  const editNode = () => {
+    runNodeAction((instance, node) => instance.beginEdit(node));
+  };
+
+  const removeNode = () => {
+    const instance = instanceRef.current;
+    const node = instance?.currentNode;
+    if (!instance || !node) {
+      setError("请先点击选择一个节点。");
+      return;
+    }
+    if (node.nodeObj.id === instance.nodeData.id) {
+      setError("根节点不能删除，请删除它的子节点或新建导图。");
+      return;
+    }
+
+    setError("");
+    void instance.removeNodes([node]).catch((cause) => {
+      setError(cause instanceof Error ? cause.message : "删除节点失败。");
+    });
+  };
+
+  const undo = () => {
+    const instance = instanceRef.current;
+    if (!instance) return;
+    instance.undo();
+    setError("");
+  };
+
+  const redo = () => {
+    const instance = instanceRef.current;
+    if (!instance) return;
+    instance.redo();
+    setError("");
+  };
+
+  const fitCanvas = () => {
+    const instance = instanceRef.current;
+    if (!instance) return;
+    instance.scaleFit();
+    instance.toCenter();
     setError("");
   };
 
@@ -156,6 +234,36 @@ export default function MindmapUi() {
           <Button variant="outline" size="sm" onClick={() => void resetMindmap()} disabled={!ready}>
             <RotateCcw className="h-3.5 w-3.5" />
             新建导图
+          </Button>
+          <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
+          <span className="text-xs font-medium text-muted-foreground">节点操作</span>
+          <Button variant="outline" size="sm" onClick={addChild} disabled={!ready}>
+            <Plus className="h-3.5 w-3.5" />
+            子节点
+          </Button>
+          <Button variant="outline" size="sm" onClick={addSibling} disabled={!ready}>
+            <GitBranch className="h-3.5 w-3.5" />
+            同级节点
+          </Button>
+          <Button variant="outline" size="sm" onClick={editNode} disabled={!ready}>
+            <Pencil className="h-3.5 w-3.5" />
+            编辑
+          </Button>
+          <Button variant="outline" size="sm" onClick={removeNode} disabled={!ready}>
+            <Trash2 className="h-3.5 w-3.5" />
+            删除
+          </Button>
+          <Button variant="outline" size="sm" onClick={undo} disabled={!ready}>
+            <Undo2 className="h-3.5 w-3.5" />
+            撤销
+          </Button>
+          <Button variant="outline" size="sm" onClick={redo} disabled={!ready}>
+            <Redo2 className="h-3.5 w-3.5" />
+            重做
+          </Button>
+          <Button variant="outline" size="sm" onClick={fitCanvas} disabled={!ready}>
+            <LocateFixed className="h-3.5 w-3.5" />
+            居中
           </Button>
           <span className="ml-auto text-xs text-muted-foreground">
             {ready ? "本地处理 · 不自动保存" : "正在加载思维导图…"}

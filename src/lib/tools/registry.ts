@@ -31,7 +31,6 @@ import { meta as drawio } from "../../tools/drawio/meta";
 import { meta as whiteboard } from "../../tools/whiteboard/meta";
 import { meta as spreadsheet } from "../../tools/spreadsheet/meta";
 import { meta as mindmap } from "../../tools/mindmap/meta";
-import { meta as kanban } from "../../tools/kanban/meta";
 import { meta as loanCalc } from "../../tools/loan-calc/meta";
 import { meta as pensionCalc } from "../../tools/pension-calc/meta";
 import { meta as uuid } from "../../tools/uuid/meta";
@@ -120,7 +119,6 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [whiteboard, () => import("../../tools/whiteboard/ui")],
   [spreadsheet, () => import("../../tools/spreadsheet/ui")],
   [mindmap, () => import("../../tools/mindmap/ui")],
-  [kanban, () => import("../../tools/kanban/ui")],
   [loanCalc, () => import("../../tools/loan-calc/ui")],
   [pensionCalc, () => import("../../tools/pension-calc/ui")],
   [uuid, () => import("../../tools/uuid/ui")],
