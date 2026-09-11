@@ -100,7 +100,7 @@ export default function WhiteboardUi() {
       local
       wide
     >
-      <div className="space-y-3">
+      <div className="flex h-[calc(100dvh-13rem)] min-h-[460px] flex-col gap-2.5">
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2">
           <input
             ref={inputRef}
@@ -128,7 +128,7 @@ export default function WhiteboardUi() {
           <span className="ml-auto text-xs text-muted-foreground">本地处理 · 不自动保存</span>
         </div>
         {error && <ErrorBox>{error}</ErrorBox>}
-        <div className="h-[min(72vh,48rem)] min-h-[32rem] overflow-hidden rounded-2xl border border-border bg-white">
+        <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-white">
           <Excalidraw
             excalidrawAPI={setApi}
             initialData={{

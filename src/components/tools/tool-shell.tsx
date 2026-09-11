@@ -22,7 +22,7 @@ export function ToolShell({
   children: ReactNode;
 }) {
   return (
-    <div className={`mx-auto ${wide ? "max-w-6xl" : "max-w-4xl"} space-y-6`}>
+    <div className={`mx-auto w-full ${wide ? "max-w-none" : "max-w-4xl"} space-y-6`}>
       <header className="flex items-start gap-3">
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-muted text-foreground">
           <Icon className="h-5 w-5" />
