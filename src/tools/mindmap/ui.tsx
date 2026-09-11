@@ -128,7 +128,7 @@ export default function MindmapUi() {
       local
       wide
     >
-      <div className="space-y-3">
+      <div className="flex h-[calc(100dvh-13rem)] min-h-[460px] flex-col gap-2.5">
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2">
           <input
             ref={inputRef}
@@ -162,10 +162,7 @@ export default function MindmapUi() {
           </span>
         </div>
         {error && <ErrorBox>{error}</ErrorBox>}
-        <div ref={containerRef} className="h-[min(72vh,48rem)] min-h-[32rem] overflow-hidden rounded-2xl border border-border bg-background" />
-        <p className="text-xs leading-5 text-muted-foreground">
-          思维导图由 Mind Elixir 提供；支持节点拖拽、编辑、撤销和公开数据格式导入导出，文件只在本地浏览器中处理。
-        </p>
+        <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-background" />
       </div>
     </ToolShell>
   );

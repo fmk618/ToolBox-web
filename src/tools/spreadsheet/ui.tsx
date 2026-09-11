@@ -126,7 +126,7 @@ export default function SpreadsheetUi() {
       local
       wide
     >
-      <div className="space-y-3">
+      <div className="flex h-[calc(100dvh-13rem)] min-h-[460px] flex-col gap-2.5">
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2">
           <input
             ref={inputRef}
@@ -152,10 +152,7 @@ export default function SpreadsheetUi() {
           </span>
         </div>
         {error && <ErrorBox>{error}</ErrorBox>}
-        <div ref={containerRef} className="h-[min(72vh,48rem)] min-h-[32rem] overflow-hidden rounded-2xl border border-border bg-background" />
-        <p className="text-xs leading-5 text-muted-foreground">
-          表格编辑器由 Univer 提供；当前使用开源核心能力，JSON 快照可保留工作簿与单元格格式，不提供未集成的 XLSX 云端转换服务。
-        </p>
+        <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-background" />
       </div>
     </ToolShell>
   );
