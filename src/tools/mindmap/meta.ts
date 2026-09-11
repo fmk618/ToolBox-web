@@ -6,6 +6,6 @@ export const meta: ToolMeta = {
   name: "思维导图",
   category: "visualization",
   icon: GitBranch,
-  description: "编辑可拖拽的思维导图和知识树，并导出 JSON、SVG 或 PNG",
-  keywords: ["mindmap", "mind-elixir", "思维导图", "脑图", "知识树"],
+  description: "本地编辑思维导图，支持主题、节点样式、布局、大纲搜索和 JSON、Markdown、SVG、PNG 导出",
+  keywords: ["mindmap", "mind-elixir", "思维导图", "脑图", "知识树", "大纲", "主题", "节点样式"],
 };
