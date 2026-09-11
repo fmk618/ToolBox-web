@@ -143,9 +143,6 @@ export default function WhiteboardUi() {
             }}
           />
         </div>
-        <p className="text-xs leading-5 text-muted-foreground">
-          白板编辑器由 Excalidraw 提供；编辑器内的版权与归属信息保持显示。导入仅接受本地文件，最大 20 MB。
-        </p>
       </div>
     </ToolShell>
   );
