@@ -6,7 +6,7 @@
 
 ## ✨ 一览
 
-- **74 个工具**，覆盖编解码 / 加密哈希 / 文本数据 / 时间 / 开发 / 颜色 / 图片 / 网络等分类
+- **75 个工具**，覆盖编解码 / 加密哈希 / 文本数据 / 时间 / 开发 / 颜色 / 图片 / 网络等分类
 - **语义色令牌**：OKLCH 设计变量 · 浅深双模 · 统一六件套表单组件
 - **⌘K 命令面板**：全工具搜索 + 键盘导航
 - **侧栏点链导航**：每个工具自带稳定主色，圆点 + 细线串成视觉链
@@ -28,7 +28,7 @@
 工具自身用到的库：`qrcode` · `diff` · `js-yaml` · `cronstrue` · `regexp-tree` ·
 `highlight.js` · `html-to-image` · `pdf-lib` · `browser-image-compression` · `marked` · `dompurify` · `jsbarcode`。
 
-大型编辑器工具使用 `@excalidraw/excalidraw`、`@univerjs/presets` / `@univerjs/preset-sheets-core` 和 `mind-elixir`，均在浏览器内懒加载；白板、表格和思维导图支持各自公开 JSON 快照的导入与导出，不启用云端协作，也不会自动保存，离开页面前请先导出快照。
+大型编辑器工具使用 `@excalidraw/excalidraw`、`@univerjs/presets` / `@univerjs/preset-sheets-core` 和 `mind-elixir`，以及无需额外依赖的项目看板，均在浏览器内懒加载；白板、表格、思维导图和项目看板支持各自公开 JSON 快照的导入与导出，不启用云端协作，也不会自动保存，离开页面前请先导出快照。
 
 ## 🚀 快速开始
 
