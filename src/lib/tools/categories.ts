@@ -13,6 +13,7 @@ import {
   QrCode,
   Settings,
   Wand2,
+  Workflow,
 } from "lucide-react";
 import type { Category } from "./types";
 
@@ -28,6 +29,7 @@ export const CATEGORIES: Category[] = [
   { id: "time", label: "日期与时间", icon: Clock },
   { id: "image", label: "图片处理", icon: ImageIcon },
   { id: "design", label: "颜色与设计", icon: Palette },
+  { id: "visualization", label: "图形与可视化", icon: Workflow },
   { id: "qrcode", label: "二维码工具", icon: QrCode },
   { id: "network", label: "网络工具", icon: Globe },
   { id: "system", label: "系统设置", icon: Settings },

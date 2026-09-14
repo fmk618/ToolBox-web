@@ -13,6 +13,7 @@ export type CategoryId =
   | "time"
   | "image"
   | "design"
+  | "visualization"
   | "qrcode"
   | "network"
   | "system";
