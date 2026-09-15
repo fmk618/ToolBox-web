@@ -300,6 +300,7 @@ export function MindMapCanvas({
         minZoom={0.1}
         maxZoom={3}
         nodesDraggable
+        selectNodesOnDrag={false}
         nodesConnectable
         elementsSelectable
         selectionOnDrag={false}

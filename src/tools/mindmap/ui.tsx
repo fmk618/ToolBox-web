@@ -736,7 +736,11 @@ export default function MindmapUi() {
     flowRef.current = instance;
     if (!defaultViewport && !initialFitRef.current) {
       initialFitRef.current = true;
-      requestAnimationFrame(() => { void instance.fitView({ padding: 0.24, maxZoom: 1.1 }); });
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          void instance.fitView({ padding: 0.24, maxZoom: 1.1 });
+        });
+      });
     }
   };
   const handleMoveEnd: OnMoveEnd = (_event, viewport) => {

@@ -338,11 +338,23 @@ body {
   background: var(--mindmap-node-bg, var(--card));
   color: var(--mindmap-node-color, var(--foreground));
   box-shadow: 0 0.5rem 1.25rem oklch(0 0 0 / 10%);
-  cursor: grab;
   transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
 }
 
-.mindmap-flow-node:active {
+.mindmap-flow-select .react-flow__node.draggable,
+.mindmap-flow-select .mindmap-flow-node {
+  cursor: pointer;
+}
+
+.mindmap-flow-pan .react-flow__node.draggable,
+.mindmap-flow-pan .mindmap-flow-node {
+  cursor: grab;
+}
+
+.mindmap-flow-select .react-flow__node.draggable.dragging,
+.mindmap-flow-select .react-flow__node.draggable.dragging .mindmap-flow-node,
+.mindmap-flow-pan .react-flow__node.draggable.dragging,
+.mindmap-flow-pan .react-flow__node.draggable.dragging .mindmap-flow-node {
   cursor: grabbing;
 }
 
