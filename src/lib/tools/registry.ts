@@ -21,6 +21,7 @@ import { meta as md5 } from "../../tools/md5/meta";
 import { meta as password } from "../../tools/password/meta";
 import { meta as jwtDecode } from "../../tools/jwt-decode/meta";
 import { meta as certInspect } from "../../tools/cert-inspect/meta";
+import { meta as rsaKeypair } from "../../tools/rsa-keypair/meta";
 import { meta as calculator } from "../../tools/calculator/meta";
 import { meta as unitConvert } from "../../tools/unit-convert/meta";
 import { meta as baseConvert } from "../../tools/base-convert/meta";
@@ -49,6 +50,7 @@ import { meta as icsGenerate } from "../../tools/ics-generate/meta";
 import { meta as pomodoro } from "../../tools/pomodoro/meta";
 import { meta as cronParse } from "../../tools/cron-parse/meta";
 import { meta as netLookup } from "../../tools/net-lookup/meta";
+import { meta as ipv4Converter } from "../../tools/ipv4-converter/meta";
 import { meta as color } from "../../tools/color/meta";
 import { meta as colorContrast } from "../../tools/color-contrast/meta";
 import { meta as httpRef } from "../../tools/http-ref/meta";
@@ -75,6 +77,9 @@ import { meta as percentCalc } from "../../tools/percent-calc/meta";
 import { meta as dateDuration } from "../../tools/date-duration/meta";
 import { meta as faviconGenerator } from "../../tools/favicon-generator/meta";
 import { meta as barcodeGenerator } from "../../tools/barcode-generator/meta";
+import { meta as videoExtract } from "../../tools/video-extract/meta";
+import { meta as audioConvert } from "../../tools/audio-convert/meta";
+import { meta as videoEdit } from "../../tools/video-edit/meta";
 
 export type LazyUi = () => Promise<{ default: ComponentType }>;
 export type ToolEntry = readonly [meta: ToolMeta, ui: LazyUi];
@@ -90,6 +95,9 @@ export type ToolEntry = readonly [meta: ToolMeta, ui: LazyUi];
  */
 export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [fileConvert, () => import("../../tools/file-convert/ui")],
+  [videoExtract, () => import("../../tools/video-extract/ui")],
+  [audioConvert, () => import("../../tools/audio-convert/ui")],
+  [videoEdit, () => import("../../tools/video-edit/ui")],
   [pdfMerge, () => import("../../tools/pdf-merge/ui")],
   [pdfSplit, () => import("../../tools/pdf-split/ui")],
   [pdfOrganize, () => import("../../tools/pdf-organize/ui")],
@@ -109,6 +117,7 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [password, () => import("../../tools/password/ui")],
   [jwtDecode, () => import("../../tools/jwt-decode/ui")],
   [certInspect, () => import("../../tools/cert-inspect/ui")],
+  [rsaKeypair, () => import("../../tools/rsa-keypair/ui")],
   [calculator, () => import("../../tools/calculator/ui")],
   [unitConvert, () => import("../../tools/unit-convert/ui")],
   [baseConvert, () => import("../../tools/base-convert/ui")],
@@ -137,6 +146,7 @@ export const TOOL_ENTRIES: readonly ToolEntry[] = [
   [pomodoro, () => import("../../tools/pomodoro/ui")],
   [cronParse, () => import("../../tools/cron-parse/ui")],
   [netLookup, () => import("../../tools/net-lookup/ui")],
+  [ipv4Converter, () => import("../../tools/ipv4-converter/ui")],
   [httpRef, () => import("../../tools/http-ref/ui")],
   [dataConvert, () => import("../../tools/data-convert/ui")],
   [sqlFormat, () => import("../../tools/sql-format/ui")],

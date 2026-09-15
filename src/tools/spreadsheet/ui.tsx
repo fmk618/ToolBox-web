@@ -72,8 +72,11 @@ export default function SpreadsheetUi() {
     void setup();
     return () => {
       cancelled = true;
-      runtimeRef.current?.univer.dispose();
+      const runtime = runtimeRef.current;
       runtimeRef.current = null;
+      if (runtime) {
+        window.setTimeout(() => runtime.univer.dispose(), 0);
+      }
     };
   }, []);
 

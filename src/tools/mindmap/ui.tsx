@@ -1,111 +1,118 @@
 "use client";
 
-import type { ChangeEvent } from "react";
-import type { MindElixirData, MindElixirInstance, NodeObj, Theme } from "mind-elixir";
+import type { ChangeEvent, MouseEvent as ReactMouseEvent } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  applyNodeChanges,
+  type Connection,
+  type EdgeChange,
+  type NodeChange,
+  type OnMoveEnd,
+  type ReactFlowInstance,
+  type Viewport,
+} from "@xyflow/react";
 import {
   Bold,
   Bot,
   Check,
-  CircleHelp,
-  Columns2,
-  Expand,
+  ChevronDown,
+  ChevronUp,
+  Download,
   FileDown,
   FileOutput,
   FileText,
   FileUp,
-  Flame,
-  FoldVertical,
   GitBranch,
+  Hand,
   Layout,
-  Lightbulb,
   Link2,
   LocateFixed,
-  MoveDown,
-  MoveUp,
-  Paintbrush,
+  Maximize2,
+  MousePointer2,
   PanelLeft,
   PanelRight,
+  Palette,
   Pencil,
-  Pin,
   Plus,
   Redo2,
-  Rocket,
   RotateCcw,
-  RotateCw,
   Search,
   Send,
+  Settings2,
   ShieldCheck,
   Sparkles,
-  Star,
-  StickyNote,
-  Tag,
   Trash2,
-  TriangleAlert,
   Underline,
   Undo2,
   X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { MindElixirData, NodeObj } from "mind-elixir";
 import { Button } from "../../components/tools/button";
 import { ErrorBox } from "../../components/tools/error-box";
-import { Segmented } from "../../components/tools/segmented";
 import { TextArea, TextField } from "../../components/tools/inputs";
 import { Select } from "../../components/tools/select";
 import { ToolShell } from "../../components/tools/tool-shell";
-import { downloadBlob, downloadText } from "../../lib/download";
-import {
-  generateMindmap,
-  type MindmapOperation,
-  type MindmapTemplate,
-} from "../../lib/api";
+import { downloadDataUrl, downloadText } from "../../lib/download";
+import { newId } from "../../lib/id";
+import { generateMindmap, type MindmapOperation, type MindmapTemplate } from "../../lib/api";
 import { loadLLMConfig } from "../../lib/llm-config";
 import { meta } from "./meta";
 import {
   colorInputValue,
+  createAutoLayoutPositions,
   DEFAULT_THEME_ID,
   filterOutline,
   flattenNodes,
   getThemePreset,
-  THEME_PRESETS,
+  graphToMindElixirData,
   isSafeHyperlink,
   isSafeMindMapData,
+  mindElixirDataToGraph,
   mergeNodeStyle,
   parseIcons,
   parseTags,
+  positionsFromGraphNodes,
+  updateMindElixirDataPositions,
   toMarkdown,
   toPlainText,
   type DirectionId,
+  type MindMapGraph,
+  type MindMapGraphNode,
   type ThemePresetId,
 } from "./lib";
+import {
+  MindMapCanvas,
+  graphToCanvas,
+  type MindMapCanvasEdge,
+  type MindMapCanvasNode,
+} from "./canvas";
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
+const MAX_HISTORY = 60;
 
-const directionOptions = [
-  { value: "right" as DirectionId, label: "右向" },
-  { value: "left" as DirectionId, label: "左向" },
-  { value: "side" as DirectionId, label: "双侧" },
-  { value: "down" as DirectionId, label: "上下" },
-] as const;
+type PanelId = "outline" | "inspector" | "ai" | null;
 
-const iconOptions = [
-  { value: "⭐", label: "重点", Icon: Star },
-  { value: "✅", label: "完成", Icon: Check },
-  { value: "💡", label: "想法", Icon: Lightbulb },
-  { value: "🔥", label: "重要", Icon: Flame },
-  { value: "📌", label: "固定", Icon: Pin },
-  { value: "🚀", label: "计划", Icon: Rocket },
-  { value: "⚠️", label: "警告", Icon: TriangleAlert },
-  { value: "❓", label: "问题", Icon: CircleHelp },
-] as const;
+type DirectionOption = { value: DirectionId; label: string };
+
+const directionOptions: DirectionOption[] = [
+  { value: "right", label: "右向" },
+  { value: "left", label: "左向" },
+  { value: "side", label: "双侧" },
+  { value: "down", label: "上下" },
+];
+
 const themeOptions = [
   { value: "latte", label: "奶油浅色" },
-  { value: "ocean", label: "海洋蓝·圆角卡片" },
+  { value: "ocean", label: "海洋蓝" },
   { value: "forest", label: "森林绿" },
   { value: "dark", label: "深色夜间" },
   { value: "contrast", label: "高对比度" },
   { value: "square", label: "方形卡片" },
 ];
 
+const iconOptions = ["⭐", "✅", "💡", "🔥", "📌", "🚀", "⚠️", "❓"];
 const aiTemplateOptions: { value: MindmapTemplate; label: string; description: string }[] = [
   { value: "project-plan", label: "项目计划", description: "目标、阶段、任务和风险" },
   { value: "meeting-notes", label: "会议纪要", description: "议题、结论、行动项和负责人" },
@@ -116,770 +123,626 @@ const aiTemplateOptions: { value: MindmapTemplate; label: string; description: s
   { value: "research-report", label: "研究报告", description: "问题、方法、证据、结论和局限" },
   { value: "course-outline", label: "课程大纲", description: "章节、知识点、练习和作业" },
 ];
-
 const aiOperationOptions = [
   { value: "replace" as MindmapOperation, label: "生成新导图" },
   { value: "append" as MindmapOperation, label: "追加到选中节点" },
   { value: "refine" as MindmapOperation, label: "整理当前导图" },
 ];
 
-function directionForInstance(instance: MindElixirInstance, direction: DirectionId) {
-  if (direction === "left") instance.initLeft();
-  else if (direction === "side") instance.initSide();
-  else if (direction === "down") instance.initDown();
-  else instance.initRight();
+function createEmptyDocument(): MindElixirData {
+  const theme = getThemePreset(DEFAULT_THEME_ID).theme;
+  return {
+    nodeData: { id: "mindmap-root", topic: "中心主题" },
+    direction: 1,
+    theme,
+    compact: false,
+    meta: { mindmapTheme: DEFAULT_THEME_ID, layout: "free", positions: {} },
+  };
 }
 
-function directionFromNumber(value: number | undefined): DirectionId {
-  if (value === 0) return "left";
-  if (value === 2) return "side";
-  if (value === 3) return "down";
-  return "right";
+function cloneNode(node: NodeObj): NodeObj {
+  const rest = { ...node };
+  delete rest.parent;
+  delete rest.dangerouslySetInnerHTML;
+  return { ...rest, children: node.children?.map(cloneNode) };
 }
 
-function nodeFromRoot(root: NodeObj | undefined, id: string | undefined): NodeObj | undefined {
-  if (!root || !id) return undefined;
-  if (root.id === id) return root;
+function mapTreeNode(root: NodeObj, id: string, transform: (node: NodeObj) => NodeObj): NodeObj {
+  if (root.id === id) return transform(cloneNode(root));
+  return {
+    ...cloneNode(root),
+    children: root.children?.map((child) => mapTreeNode(child, id, transform)),
+  };
+}
+
+function insertAfter(root: NodeObj, targetId: string, nextNode: NodeObj): { root: NodeObj; inserted: boolean } {
+  const copy = cloneNode(root);
+  const children = copy.children ?? [];
+  const index = children.findIndex((child) => child.id === targetId);
+  if (index >= 0) {
+    children.splice(index + 1, 0, nextNode);
+    copy.children = children;
+    return { root: copy, inserted: true };
+  }
+  for (let index = 0; index < children.length; index += 1) {
+    const result = insertAfter(children[index], targetId, nextNode);
+    if (result.inserted) {
+      children[index] = result.root;
+      copy.children = children;
+      return { root: copy, inserted: true };
+    }
+  }
+  return { root: copy, inserted: false };
+}
+
+function removeFromTree(root: NodeObj, targetId: string): { root: NodeObj; removed: boolean } {
+  const copy = cloneNode(root);
+  const children = copy.children ?? [];
+  const index = children.findIndex((child) => child.id === targetId);
+  if (index >= 0) {
+    children.splice(index, 1);
+    copy.children = children.length ? children : undefined;
+    return { root: copy, removed: true };
+  }
+  for (let childIndex = 0; childIndex < children.length; childIndex += 1) {
+    const result = removeFromTree(children[childIndex], targetId);
+    if (result.removed) {
+      children[childIndex] = result.root;
+      copy.children = children;
+      return { root: copy, removed: true };
+    }
+  }
+  return { root: copy, removed: false };
+}
+
+function moveSibling(root: NodeObj, targetId: string, delta: -1 | 1): { root: NodeObj; moved: boolean } {
+  const copy = cloneNode(root);
+  const children = copy.children ?? [];
+  const index = children.findIndex((child) => child.id === targetId);
+  if (index >= 0) {
+    const nextIndex = index + delta;
+    if (nextIndex < 0 || nextIndex >= children.length) return { root: copy, moved: false };
+    [children[index], children[nextIndex]] = [children[nextIndex], children[index]];
+    copy.children = children;
+    return { root: copy, moved: true };
+  }
+  for (let childIndex = 0; childIndex < children.length; childIndex += 1) {
+    const result = moveSibling(children[childIndex], targetId, delta);
+    if (result.moved) {
+      children[childIndex] = result.root;
+      copy.children = children;
+      return { root: copy, moved: true };
+    }
+  }
+  return { root: copy, moved: false };
+}
+
+function parentIdOf(root: NodeObj, targetId: string): string | undefined {
   for (const child of root.children ?? []) {
-    const found = nodeFromRoot(child, id);
-    if (found) return found;
+    if (child.id === targetId) return root.id;
+    const result = parentIdOf(child, targetId);
+    if (result) return result;
   }
   return undefined;
 }
 
-function ancestorIds(root: NodeObj | undefined, id: string, path: string[] = []): string[] | undefined {
-  if (!root) return undefined;
-  const nextPath = [...path, root.id];
-  if (root.id === id) return nextPath;
-  for (const child of root.children ?? []) {
-    const found = ancestorIds(child, id, nextPath);
-    if (found) return found;
-  }
-  return undefined;
+function canvasNodeToGraph(node: MindMapCanvasNode): MindMapGraphNode {
+  return {
+    id: node.id,
+    type: "mindmap",
+    position: { x: node.position.x, y: node.position.y },
+    data: { label: node.data.label, node: node.data.node },
+  };
+}
+
+function graphWithCanvasNodes(graph: MindMapGraph, nodes: readonly MindMapCanvasNode[]): MindMapGraph {
+  return { ...graph, nodes: nodes.map(canvasNodeToGraph) };
+}
+
+function hasPath(edges: MindMapGraph["edges"], from: string, target: string, seen = new Set<string>()): boolean {
+  if (from === target) return true;
+  if (seen.has(from)) return false;
+  seen.add(from);
+  return edges.filter((edge) => edge.source === from).some((edge) => hasPath(edges, edge.target, target, seen));
 }
 
 export default function MindmapUi() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const instanceRef = useRef<MindElixirInstance | null>(null);
-  const detachBusRef = useRef<(() => void) | null>(null);
-  const mountedRef = useRef(false);
-  const themeIdRef = useRef<ThemePresetId>(DEFAULT_THEME_ID);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [ready, setReady] = useState(false);
-  const [error, setError] = useState("");
-  const [snapshot, setSnapshot] = useState<MindElixirData | null>(null);
+  const flowRef = useRef<ReactFlowInstance<MindMapCanvasNode, MindMapCanvasEdge> | null>(null);
+  const initial = useMemo(() => createEmptyDocument(), []);
+  const [snapshot, setSnapshot] = useState<MindElixirData>(initial);
+  const [graph, setGraph] = useState<MindMapGraph>(() => mindElixirDataToGraph(initial));
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [panel, setPanel] = useState<PanelId>(null);
+  const [query, setQuery] = useState("");
   const [themeId, setThemeId] = useState<ThemePresetId>(DEFAULT_THEME_ID);
   const [direction, setDirection] = useState<DirectionId>("right");
   const [compact, setCompact] = useState(false);
-  const [query, setQuery] = useState("");
-  const [leftPanelOpen, setLeftPanelOpen] = useState(false);
-  const [rightPanelOpen, setRightPanelOpen] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<"free" | "mindmap" | "tree">("free");
+  const [edgeKind, setEdgeKind] = useState<"hierarchy" | "relationship">("hierarchy");
+  const [error, setError] = useState("");
+  const [history, setHistory] = useState<MindElixirData[]>([]);
+  const [future, setFuture] = useState<MindElixirData[]>([]);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [linkDraft, setLinkDraft] = useState("");
+  const [edgeLabelDraft, setEdgeLabelDraft] = useState("");
+  const [tagsDraft, setTagsDraft] = useState("");
+  const [iconsDraft, setIconsDraft] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiOperation, setAiOperation] = useState<MindmapOperation>("replace");
   const [aiTemplate, setAiTemplate] = useState<MindmapTemplate>("project-plan");
-  const [aiDirection, setAiDirection] = useState<DirectionId>("right");
-  const [aiCompact, setAiCompact] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState("");
   const [aiPreview, setAiPreview] = useState<MindElixirData | null>(null);
   const [aiPreviewCount, setAiPreviewCount] = useState(0);
   const aiAbortRef = useRef<AbortController | null>(null);
-  const aiUndoSnapshotRef = useRef<MindElixirData | null>(null);
-  const aiRedoSnapshotRef = useRef<MindElixirData | null>(null);
-  const [noteDraft, setNoteDraft] = useState("");
-  const [linkDraft, setLinkDraft] = useState("");
-  const [tagsDraft, setTagsDraft] = useState("");
-  const [iconsDraft, setIconsDraft] = useState("");
 
   const selectedId = selectedIds[selectedIds.length - 1];
-  const selectedNode = useMemo(
-    () => nodeFromRoot(snapshot?.nodeData, selectedId),
-    [selectedId, snapshot?.nodeData],
-  );
-  const outline = useMemo(
-    () => filterOutline(snapshot ? flattenNodes(snapshot.nodeData) : [], query),
-    [query, snapshot],
-  );
+  const selectedNode = useMemo(() => flattenNodes(snapshot.nodeData).find(({ node }) => node.id === selectedId)?.node, [selectedId, snapshot.nodeData]);
+  const selectedEdge = useMemo(() => graph.edges.find((edge) => edge.id === selectedEdgeId), [graph.edges, selectedEdgeId]);
+  const outline = useMemo(() => filterOutline(snapshot ? flattenNodes(snapshot.nodeData) : [], query), [query, snapshot]);
 
-  useEffect(() => {
-    themeIdRef.current = themeId;
-  }, [themeId]);
-
-  const syncSnapshot = useCallback((instance: MindElixirInstance) => {
-    const data = instance.getData();
-    setSnapshot(data);
-    setDirection(directionFromNumber(data.direction ?? instance.direction));
-    setCompact(Boolean(data.compact ?? instance.compact));
-  }, []);
-
-  const setDraftsForNode = useCallback((node?: NodeObj) => {
-    setNoteDraft(node?.note ?? "");
-    setLinkDraft(node?.hyperLink ?? "");
-    setTagsDraft(
-      (node?.tags ?? [])
-        .map((tag) => (typeof tag === "string" ? tag : tag.text))
-        .join(", "),
-    );
-    setIconsDraft((node?.icons ?? []).join(" "));
-  }, []);
-
-  const attachBus = useCallback(
-    (instance: MindElixirInstance) => {
-      const sync = () => syncSnapshot(instance);
-      const onSelect = (nodes: NodeObj[]) => {
-        setSelectedIds(nodes.map((node) => node.id));
-        setDraftsForNode(nodes[nodes.length - 1]);
-        sync();
-      };
-      const onUnselect = (nodes: NodeObj[]) => {
-        const ids = new Set(nodes.map((node) => node.id));
-        setSelectedIds((current) => current.filter((id) => !ids.has(id)));
-        sync();
-      };
-      const onNewNode = (node: NodeObj) => {
-        setSelectedIds([node.id]);
-        setDraftsForNode(node);
-        sync();
-      };
-      const onDirection = (value: number) => {
-        setDirection(directionFromNumber(value));
-        sync();
-      };
-      const bus = instance.bus;
-      bus.addListener("operation", sync);
-      bus.addListener("selectNodes", onSelect);
-      bus.addListener("unselectNodes", onUnselect);
-      bus.addListener("selectNewNode", onNewNode);
-      bus.addListener("changeDirection", onDirection);
-      detachBusRef.current = () => {
-        if (!instance.bus) {
-          detachBusRef.current = null;
-          return;
-        }
-        bus.removeListener("operation", sync);
-        bus.removeListener("selectNodes", onSelect);
-        bus.removeListener("unselectNodes", onUnselect);
-        bus.removeListener("selectNewNode", onNewNode);
-        bus.removeListener("changeDirection", onDirection);
-        detachBusRef.current = null;
-      };
-    },
-    [setDraftsForNode, syncSnapshot],
-  );
-
-  const mountMindmap = useCallback(
-    async (data?: MindElixirData) => {
-      const { default: MindElixir } = await import("mind-elixir");
-      if (!mountedRef.current || !containerRef.current) return;
-
-      detachBusRef.current?.();
-      instanceRef.current?.destroy();
-      const importedTheme = data?.theme;
-      const importedPresetId = THEME_PRESETS.find(
-        (preset) => preset.theme.name === importedTheme?.name,
-      )?.id ?? themeIdRef.current;
-      const importedPreset = getThemePreset(importedPresetId);
-      const theme: Theme = importedTheme ?? importedPreset.theme;
-      const initialData = data ?? {
-        ...MindElixir.new("中心主题"),
-        direction: MindElixir.RIGHT as 0 | 1 | 2 | 3,
-        theme,
-        compact: false,
-        meta: { mindmapTheme: importedPreset.id },
-      };
-      const instance = new MindElixir({
-        el: containerRef.current,
-        direction: initialData.direction ?? MindElixir.RIGHT,
-        editable: true,
-        contextMenu: true,
-        toolBar: false,
-        keypress: true,
-        allowUndo: true,
-        mouseSelectionButton: 0,
-        compact: Boolean(initialData.compact),
-        theme,
-        mobileMultiSelect: true,
-      });
-      instance.init(initialData);
-      instanceRef.current = instance;
-      attachBus(instance);
-      const nextThemeId = THEME_PRESETS.find(
-        (preset) => preset.theme.name === theme.name,
-      )?.id;
-      if (nextThemeId) {
-        themeIdRef.current = nextThemeId;
-        setThemeId(nextThemeId);
-      }
-      setSelectedIds([]);
-      syncSnapshot(instance);
-      setReady(true);
+  const callbacks = useMemo(() => ({
+    onBeginEdit: (id: string) => setEditingId(id),
+    onCommitEdit: (id: string, value: string) => {
+      const nextRoot = mapTreeNode(snapshot.nodeData, id, (node) => ({ ...node, topic: value }));
+      const nextData = { ...snapshot, nodeData: nextRoot };
+      setHistory((items) => [...items, snapshot].slice(-MAX_HISTORY));
+      setFuture([]);
+      setSnapshot(nextData);
+      setGraph(mindElixirDataToGraph(nextData));
+      setEditingId(null);
       setError("");
     },
-    [attachBus, syncSnapshot],
-  );
+    onCancelEdit: () => setEditingId(null),
+  }), [snapshot]);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    void mountMindmap().catch((cause) => {
-      if (mountedRef.current) setError(cause instanceof Error ? cause.message : "思维导图加载失败。");
+  const commitGraph = useCallback((nextGraph: MindMapGraph, baseData = snapshot) => {
+    try {
+      const nextData = graphToMindElixirData(nextGraph, baseData);
+      setHistory((items) => [...items, snapshot].slice(-MAX_HISTORY));
+      setFuture([]);
+      setGraph(nextGraph);
+      setSnapshot(nextData);
+      setError("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "画布数据无效。");
+    }
+  }, [snapshot]);
+
+  const replaceDocument = useCallback((data: MindElixirData, record = true) => {
+    try {
+      if (!isSafeMindMapData(data)) throw new Error("文件不是有效或安全的思维导图快照。");
+      const nextGraph = mindElixirDataToGraph(data);
+      const normalized = updateMindElixirDataPositions(data, nextGraph.nodes);
+      if (record) setHistory((items) => [...items, snapshot].slice(-MAX_HISTORY));
+      setFuture([]);
+      setSnapshot(normalized);
+      setGraph(nextGraph);
+      setSelectedIds([]);
+      setEditingId(null);
+      const nextTheme = themeOptions.find((option) => option.value === data.meta?.mindmapTheme)?.value as ThemePresetId | undefined;
+      if (nextTheme) setThemeId(nextTheme);
+      setDirection(data.direction === 0 ? "left" : data.direction === 2 ? "side" : data.direction === 3 ? "down" : "right");
+      setCompact(Boolean(data.compact));
+      setLayoutMode(data.meta?.layout === "mindmap" || data.meta?.layout === "tree" ? data.meta.layout : "free");
+      setError("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "无法读取思维导图快照。");
+    }
+  }, [snapshot]);
+
+  const updateNodeDrafts = (node: NodeObj | undefined) => {
+    setNoteDraft(node?.note ?? "");
+    setLinkDraft(node?.hyperLink ?? "");
+    setTagsDraft((node?.tags ?? []).map((tag) => typeof tag === "string" ? tag : tag.text).join(", "));
+    setIconsDraft((node?.icons ?? []).join(" "));
+  };
+
+  const handleNodeClick = (event: ReactMouseEvent, node: MindMapCanvasNode) => {
+    const multi = event.shiftKey || event.metaKey || event.ctrlKey;
+    setSelectedEdgeId(null);
+    setSelectedIds((current) => multi ? (current.includes(node.id) ? current.filter((id) => id !== node.id) : [...current, node.id]) : [node.id]);
+    updateNodeDrafts(node.data.node);
+    setError("");
+  };
+
+  const handleEdgeClick = (_event: ReactMouseEvent, edge: MindMapCanvasEdge) => {
+    setSelectedIds([]);
+    setSelectedEdgeId(edge.id);
+    setEdgeLabelDraft(edge.data?.label ?? "");
+    setError("");
+  };
+
+  const handleNodesChange = (changes: NodeChange<MindMapCanvasNode>[]) => {
+    const removedIds = changes.filter((change) => change.type === "remove").map((change) => change.id);
+    if (removedIds.length) {
+      let nextRoot = snapshot.nodeData;
+      for (const id of removedIds) {
+        if (id === snapshot.nodeData.id) {
+          setError("根节点不能删除。");
+          return;
+        }
+        const result = removeFromTree(nextRoot, id);
+        if (!result.removed) {
+          setError("节点已经不存在。");
+          return;
+        }
+        nextRoot = result.root;
+      }
+      const nextData = { ...snapshot, nodeData: nextRoot };
+      commitGraph(mindElixirDataToGraph(nextData), nextData);
+      setSelectedIds((current) => current.filter((id) => !removedIds.includes(id)));
+      return;
+    }
+    setGraph((current) => {
+      const rootId = current.nodes.find((node) => !current.edges.some((edge) => edge.target === node.id))?.id ?? "";
+      const flow = graphToCanvas(current, rootId, callbacks, editingId);
+      const changed = applyNodeChanges(changes, flow.nodes);
+      setSelectedIds(changed.filter((node) => node.selected).map((node) => node.id));
+      return graphWithCanvasNodes(current, changed);
     });
-    return () => {
-      mountedRef.current = false;
-      aiAbortRef.current?.abort();
-      detachBusRef.current?.();
-      instanceRef.current?.destroy();
-      instanceRef.current = null;
+  };
+
+  const handleNodeDragStop = (_event: MouseEvent | TouchEvent, _node: MindMapCanvasNode, nodes: MindMapCanvasNode[]) => {
+    const positions = positionsFromGraphNodes(graph.nodes.map((item) => {
+      const moved = nodes.find((node) => node.id === item.id);
+      return moved ? canvasNodeToGraph(moved) : item;
+    }));
+    const nextGraph: MindMapGraph = {
+      ...graph,
+      nodes: graph.nodes.map((item) => {
+        const moved = nodes.find((node) => node.id === item.id);
+        return moved ? canvasNodeToGraph(moved) : item;
+      }),
     };
-  }, [mountMindmap]);
+    const nextData: MindElixirData = {
+      ...snapshot,
+      meta: { ...(snapshot.meta ?? {}), positions, layout: "free" },
+    };
+    setHistory((items) => [...items, snapshot].slice(-MAX_HISTORY));
+    setFuture([]);
+    setGraph(nextGraph);
+    setSnapshot(nextData);
+    setLayoutMode("free");
+  };
 
-  const runNodeAction = (
-    action: (instance: MindElixirInstance, node: NonNullable<MindElixirInstance["currentNode"]>) => Promise<void> | void,
-  ) => {
-    const instance = instanceRef.current;
-    const node = instance?.currentNode;
-    if (!instance || !node) {
-      setError("请先点击选择一个节点。你也可以双击节点直接编辑。");
+  const handleEdgesChange = (changes: EdgeChange<MindMapCanvasEdge>[]) => {
+    const removedIds = changes.filter((change) => change.type === "remove").map((change) => change.id);
+    if (!removedIds.length) return;
+    const removedEdges = graph.edges.filter((edge) => removedIds.includes(edge.id));
+    if (removedEdges.some((edge) => edge.data?.kind !== "relationship")) {
+      setError("层级边不能直接删除；请删除节点或重新连接层级关系。");
       return;
     }
-    setError("");
-    void Promise.resolve(action(instance, node)).catch((cause) => {
-      setError(cause instanceof Error ? cause.message : "节点操作失败。");
-    });
+    const nextGraph: MindMapGraph = { ...graph, edges: graph.edges.filter((edge) => !removedIds.includes(edge.id)) };
+    commitGraph(nextGraph, snapshot);
   };
 
-  const addChild = () => runNodeAction((instance, node) => instance.addChild(node));
-  const addSibling = () => runNodeAction((instance, node) => instance.insertSibling("after", node));
-  const addParent = () => runNodeAction((instance, node) => instance.insertParent(node));
-  const editNode = () => runNodeAction((instance, node) => instance.beginEdit(node));
-  const moveUp = () => runNodeAction((instance, node) => instance.moveUpNode(node));
-  const moveDown = () => runNodeAction((instance, node) => instance.moveDownNode(node));
-
-  const removeNode = () => {
-    const instance = instanceRef.current;
-    const nodes = instance?.currentNodes ?? [];
-    if (!instance || nodes.length === 0) {
-      setError("请先点击选择一个节点。");
+  const handleConnect = (connection: Connection) => {
+    if (!connection.source || !connection.target || connection.source === connection.target) {
+      setError("不能连接节点自身。");
       return;
     }
-    if (nodes.some((node) => node.nodeObj.id === instance.nodeData.id)) {
-      setError("根节点不能删除，请删除它的子节点或新建导图。");
+    if (edgeKind === "relationship") {
+      const nextGraph: MindMapGraph = {
+        ...graph,
+        edges: [...graph.edges, { id: `relationship-${newId()}`, source: connection.source, target: connection.target, type: "mindmap", data: { kind: "relationship" as const, label: "" } }],
+      };
+      commitGraph(nextGraph);
       return;
     }
-    setError("");
-    void instance.removeNodes(nodes).catch((cause) => {
-      setError(cause instanceof Error ? cause.message : "删除节点失败。");
-    });
-  };
-
-  const toggleExpanded = (expand?: boolean) => {
-    runNodeAction((instance, selectedTopic) => {
-      let node = selectedTopic;
-      try {
-        node = instance.findEle(selectedTopic.nodeObj.id);
-      } catch {
-        setError("当前节点已不在画布中，请重新选择后再操作。");
-        return;
-      }
-
-      if (!node.nodeObj.children?.length) {
-        setError("当前节点没有子节点可折叠或展开。");
-        return;
-      }
-      if (node.nodeObj.id === instance.nodeData.id) {
-        setError("根节点不支持折叠或展开。");
-        return;
-      }
-
-      const expander = node.parentNode?.children?.[1];
-      if (!expander || expander.tagName !== "ME-EPD") {
-        setError("当前节点的折叠控件不可用，请重新选择节点。");
-        return;
-      }
-
-      const isExpanded = node.nodeObj.expanded !== false;
-      const next = expand ?? !isExpanded;
-      if (next === isExpanded) return;
-
-      instance.expandNode(node, next);
-      syncSnapshot(instance);
-    });
-  };
-
-  const undo = () => {
-    const instance = instanceRef.current;
-    if (!instance) return;
-    if (aiUndoSnapshotRef.current) {
-      aiRedoSnapshotRef.current = instance.getData();
-      const previous = aiUndoSnapshotRef.current;
-      aiUndoSnapshotRef.current = null;
-      instance.refresh(previous);
-      syncSnapshot(instance);
-    } else {
-      instance.undo();
+    if (graph.edges.some((edge) => edge.data?.kind !== "relationship" && edge.target === connection.target)) {
+      setError("该节点已经有父节点。");
+      return;
     }
-    setError("");
-  };
-  const redo = () => {
-    const instance = instanceRef.current;
-    if (!instance) return;
-    if (aiRedoSnapshotRef.current) {
-      aiUndoSnapshotRef.current = instance.getData();
-      const next = aiRedoSnapshotRef.current;
-      aiRedoSnapshotRef.current = null;
-      instance.refresh(next);
-      syncSnapshot(instance);
-    } else {
-      instance.redo();
+    if (hasPath(graph.edges.filter((edge) => edge.data?.kind !== "relationship"), connection.target, connection.source)) {
+      setError("不能创建循环层级关系。");
+      return;
     }
-    setError("");
-  };
-  const fitCanvas = () => {
-    const instance = instanceRef.current;
-    if (!instance) return;
-    instance.scaleFit();
-    instance.toCenter();
-    setError("");
+    const nextGraph = {
+      ...graph,
+      edges: [...graph.edges, { id: `${connection.source}->${connection.target}-${newId()}`, source: connection.source, target: connection.target, type: "mindmap", data: { kind: "hierarchy" as const } }],
+    };
+    commitGraph(nextGraph);
   };
 
-  const applyNodePatch = (patch: Partial<NodeObj>) => {
-    runNodeAction((instance, node) => instance.reshapeNode(node, patch));
+  const addNode = (kind: "child" | "sibling" | "parent") => {
+    const target = selectedNode;
+    if (!target) {
+      setError("请先选择一个节点。");
+      return;
+    }
+    const nextNode: NodeObj = { id: newId(), topic: kind === "parent" ? "新父节点" : "新节点" };
+    let nextRoot = snapshot.nodeData;
+    if (kind === "child") nextRoot = mapTreeNode(nextRoot, target.id, (node) => ({ ...node, children: [...(node.children ?? []), nextNode] }));
+    if (kind === "sibling") {
+      const result = insertAfter(nextRoot, target.id, nextNode);
+      if (!result.inserted) { setError("无法插入同级节点。"); return; }
+      nextRoot = result.root;
+    }
+    if (kind === "parent") {
+      const parentId = parentIdOf(nextRoot, target.id);
+      const parentNode: NodeObj = { ...nextNode, children: [cloneNode(target)] };
+      if (!parentId) nextRoot = parentNode;
+      else nextRoot = mapTreeNode(nextRoot, parentId, (node) => ({ ...node, children: node.children?.map((child) => child.id === target.id ? parentNode : child) }));
+    }
+    const nextData = { ...snapshot, nodeData: nextRoot, meta: { ...(snapshot.meta ?? {}), layout: "free" } };
+    const nextGraph = mindElixirDataToGraph(nextData);
+    const targetPosition = graph.nodes.find((node) => node.id === target.id)?.position ?? { x: 0, y: 0 };
+    const inserted = nextGraph.nodes.find((node) => node.id === nextNode.id);
+    if (inserted) inserted.position = { x: targetPosition.x + (kind === "parent" ? -280 : 280), y: targetPosition.y + (kind === "sibling" ? 110 : 0) };
+    commitGraph(nextGraph, nextData);
+    setSelectedIds([nextNode.id]);
+  };
+
+  const removeSelected = () => {
+    if (!selectedId) { setError("请先选择一个节点。"); return; }
+    if (selectedId === snapshot.nodeData.id) { setError("根节点不能删除。"); return; }
+    const result = removeFromTree(snapshot.nodeData, selectedId);
+    if (!result.removed) { setError("节点已经不存在。"); return; }
+    const nextData = { ...snapshot, nodeData: result.root };
+    commitGraph(mindElixirDataToGraph(nextData), nextData);
+    setSelectedIds([]);
+  };
+
+  const moveSelected = (delta: -1 | 1) => {
+    if (!selectedId) { setError("请先选择一个节点。"); return; }
+    const result = moveSibling(snapshot.nodeData, selectedId, delta);
+    if (!result.moved) { setError("当前节点无法继续移动。"); return; }
+    const nextData = { ...snapshot, nodeData: result.root };
+    commitGraph(mindElixirDataToGraph(nextData), nextData);
+  };
+
+  const toggleExpanded = () => {
+    if (!selectedId) { setError("请先选择一个节点。"); return; }
+    const nextRoot = mapTreeNode(snapshot.nodeData, selectedId, (node) => ({ ...node, expanded: node.expanded === false }));
+    const nextData = { ...snapshot, nodeData: nextRoot };
+    commitGraph(mindElixirDataToGraph(nextData), nextData);
   };
 
   const applyStyle = (style: Partial<NonNullable<NodeObj["style"]>>) => {
-    const node = selectedNode;
-    if (!node) {
-      setError("请先选择要设置样式的节点。");
-      return;
-    }
-    applyNodePatch({ style: mergeNodeStyle(node, style).style });
+    if (!selectedNode) { setError("请先选择一个节点。"); return; }
+    const nextRoot = mapTreeNode(snapshot.nodeData, selectedNode.id, (node) => ({ ...node, style: mergeNodeStyle(node, style).style }));
+    const nextData = { ...snapshot, nodeData: nextRoot };
+    commitGraph(mindElixirDataToGraph(nextData), nextData);
   };
 
   const saveDetails = () => {
-    if (!selectedNode) {
-      setError("请先选择一个节点，再编辑备注和标签。");
-      return;
-    }
-    if (!isSafeHyperlink(linkDraft.trim())) {
-      setError("链接仅支持 http、https 或 mailto 地址。");
-      return;
-    }
-    applyNodePatch({
-      note: noteDraft.trim() || undefined,
-      hyperLink: linkDraft.trim() || undefined,
-      tags: parseTags(tagsDraft),
-      icons: parseIcons(iconsDraft),
-    });
+    if (!selectedNode) { setError("请先选择一个节点。"); return; }
+    if (!isSafeHyperlink(linkDraft.trim())) { setError("链接仅支持 http、https 或 mailto 地址。"); return; }
+    const nextRoot = mapTreeNode(snapshot.nodeData, selectedNode.id, (node) => ({ ...node, note: noteDraft.trim() || undefined, hyperLink: linkDraft.trim() || undefined, tags: parseTags(tagsDraft), icons: parseIcons(iconsDraft) }));
+    const nextData = { ...snapshot, nodeData: nextRoot };
+    commitGraph(mindElixirDataToGraph(nextData), nextData);
+    updateNodeDrafts(flattenNodes(nextRoot).find(({ node }) => node.id === selectedNode.id)?.node);
   };
 
-  const toggleIcon = (icon: string) => {
-    const icons = parseIcons(iconsDraft);
-    const next = icons.includes(icon) ? icons.filter((item) => item !== icon) : [...icons, icon];
-    setIconsDraft(next.join(" "));
+  const saveEdgeLabel = () => {
+    if (!selectedEdge) { setError("请先选择一条关系线。"); return; }
+    if (selectedEdge.data?.kind !== "relationship") { setError("层级线不支持标签。"); return; }
+    const nextGraph: MindMapGraph = {
+      ...graph,
+      edges: graph.edges.map((edge) => edge.id === selectedEdge.id ? { ...edge, data: { ...edge.data, kind: "relationship", label: edgeLabelDraft.trim().slice(0, 500) } } : edge),
+    };
+    commitGraph(nextGraph, snapshot);
   };
 
   const changeTheme = (value: string) => {
     const id = value as ThemePresetId;
-    const instance = instanceRef.current;
-    if (!instance) return;
-    const preset = getThemePreset(id);
-    themeIdRef.current = id;
+    const nextData = { ...snapshot, theme: getThemePreset(id).theme, meta: { ...(snapshot.meta ?? {}), mindmapTheme: id } };
     setThemeId(id);
-    instance.changeTheme(preset.theme, true);
-    syncSnapshot(instance);
+    commitGraph(graph, nextData);
   };
 
-  const changeDirection = (value: DirectionId) => {
-    const instance = instanceRef.current;
-    if (!instance) return;
-    directionForInstance(instance, value);
-    setDirection(value);
-    syncSnapshot(instance);
+  const applyAutoLayout = (nextDirection: DirectionId) => {
+    const positions = createAutoLayoutPositions(snapshot.nodeData, nextDirection, compact);
+    const directionValue: MindElixirData["direction"] = nextDirection === "left" ? 0 : nextDirection === "side" ? 2 : nextDirection === "down" ? 3 : 1;
+    const nextGraph = { ...graph, nodes: graph.nodes.map((node) => ({ ...node, position: positions[node.id] ?? node.position })) };
+    const nextData: MindElixirData = { ...snapshot, direction: directionValue, meta: { ...(snapshot.meta ?? {}), positions, layout: nextDirection === "down" ? "tree" : "mindmap" } };
+    setDirection(nextDirection);
+    setLayoutMode(nextDirection === "down" ? "tree" : "mindmap");
+    commitGraph(nextGraph, nextData);
+    requestAnimationFrame(() => { void flowRef.current?.fitView({ padding: 0.24, duration: 240 }); });
   };
 
   const changeCompact = (value: boolean) => {
-    const instance = instanceRef.current;
-    if (!instance) return;
-    instance.changeCompact(value);
     setCompact(value);
-    syncSnapshot(instance);
+    commitGraph(graph, { ...snapshot, compact: value });
   };
 
-  const focusOutline = (id: string) => {
-    const instance = instanceRef.current;
-    if (!instance) return;
-    try {
-      const path = ancestorIds(instance.nodeData, id) ?? ancestorIds(snapshot?.nodeData, id);
-      if (!path) {
-        setError("无法定位这个节点，它可能已经被删除或不在当前视图中。");
-        return;
-      }
-
-      let needsRefresh = false;
-      path.slice(0, -1).forEach((ancestorId) => {
-        const ancestor = nodeFromRoot(instance.nodeData, ancestorId);
-        if (ancestor?.children?.length && ancestor.expanded === false) {
-          ancestor.expanded = true;
-          needsRefresh = true;
-        }
-      });
-      if (needsRefresh) instance.refresh();
-
-      let topic: NonNullable<MindElixirInstance["currentNode"]>;
-      try {
-        topic = instance.findEle(id);
-      } catch {
-        setError("无法定位这个节点，它可能已经被删除或不在当前视图中。");
-        return;
-      }
-      instance.selectNode(topic);
-      instance.scrollIntoView(topic, true);
-      setSelectedIds([id]);
-      syncSnapshot(instance);
-      setError("");
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "无法定位这个节点。");
-    }
+  const undo = () => {
+    const previous = history[history.length - 1];
+    if (!previous) return;
+    setHistory((items) => items.slice(0, -1));
+    setFuture((items) => [snapshot, ...items].slice(0, MAX_HISTORY));
+    replaceDocument(previous, false);
   };
 
-  const exportJson = () => {
-    const instance = instanceRef.current;
-    if (!instance) return;
-    downloadText(instance.getDataString(), "思维导图.mindmap.json", "application/json;charset=utf-8");
-  };
-  const exportOutline = (format: "markdown" | "text") => {
-    if (!snapshot) return;
-    const content = format === "markdown" ? toMarkdown(snapshot.nodeData) : toPlainText(snapshot.nodeData);
-    downloadText(content, `思维导图.${format === "markdown" ? "md" : "txt"}`, "text/plain;charset=utf-8");
-  };
-  const exportImage = async (format: "svg" | "png") => {
-    const instance = instanceRef.current;
-    if (!instance) return;
-    try {
-      const blob = format === "svg" ? instance.exportSvg() : await instance.exportPng();
-      if (blob) downloadBlob(blob, `思维导图.${format}`);
-      setError("");
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "导出失败。");
-    }
+  const redo = () => {
+    const next = future[0];
+    if (!next) return;
+    setFuture((items) => items.slice(1));
+    setHistory((items) => [...items, snapshot].slice(-MAX_HISTORY));
+    replaceDocument(next, false);
   };
 
-  const resetMindmap = async () => {
-    setReady(false);
-    setSelectedIds([]);
-    await mountMindmap();
-  };
+  const resetMindmap = () => replaceDocument(createEmptyDocument());
 
   const importMindmap = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    if (file.size > MAX_IMPORT_BYTES) {
-      setError("文件过大，请选择 10 MB 以内的思维导图快照。");
-      return;
-    }
+    if (file.size > MAX_IMPORT_BYTES) { setError("文件过大，请选择 10 MB 以内的快照。"); return; }
     try {
       const data: unknown = JSON.parse(await file.text());
       if (!isSafeMindMapData(data)) throw new Error("文件不是有效或安全的思维导图快照。");
-      setReady(false);
-      await mountMindmap(data);
+      replaceDocument(data);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "无法读取思维导图快照。");
-      setReady(Boolean(instanceRef.current));
     }
   };
 
-  const applyAiPreview = () => {
-    const instance = instanceRef.current;
-    if (!instance || !aiPreview || !isSafeMindMapData(aiPreview)) {
-      setAiError("没有可应用的安全预览结果。");
-      return;
+  const exportJson = () => downloadText(JSON.stringify(snapshot, null, 2), "思维导图.mindmap.json", "application/json;charset=utf-8");
+  const exportOutline = (format: "markdown" | "text") => downloadText(format === "markdown" ? toMarkdown(snapshot.nodeData) : toPlainText(snapshot.nodeData), `思维导图.${format === "markdown" ? "md" : "txt"}`, "text/plain;charset=utf-8");
+  const exportImage = async (format: "svg" | "png") => {
+    const element = document.querySelector(".mindmap-flow .react-flow__viewport") as HTMLElement | null;
+    if (!element) return;
+    try {
+      const { toPng, toSvg } = await import("html-to-image");
+      if (format === "svg") downloadText(await toSvg(element, { backgroundColor: "var(--background)" }), "思维导图.svg", "image/svg+xml;charset=utf-8");
+      else downloadDataUrl(await toPng(element, { backgroundColor: "var(--background)", pixelRatio: 2 }), "思维导图.png");
+      setError("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "导出图片失败。");
     }
-    aiUndoSnapshotRef.current = instance.getData();
-    aiRedoSnapshotRef.current = null;
-    instance.refresh(aiPreview);
-    syncSnapshot(instance);
-    setSelectedIds([]);
+  };
+
+  const openInspector = () => {
+    if (selectedNode) updateNodeDrafts(selectedNode);
+    setPanel("inspector");
+  };
+
+  const openAi = () => {
+    setAiError("");
     setAiPreview(null);
-    setAiError("");
-    setAiOpen(false);
-  };
-
-  const openAiAssistant = () => {
-    setAiDirection(direction);
-    setAiCompact(compact);
-    setAiError("");
-    setAiOpen(true);
-  };
-
-  const cancelAiGeneration = () => {
-    aiAbortRef.current?.abort();
-    aiAbortRef.current = null;
-    setAiBusy(false);
+    setPanel("ai");
   };
 
   const generateWithAi = async () => {
     const prompt = aiPrompt.trim();
-    if (!prompt) {
-      setAiError("请先描述你想绘制或修改的内容。");
-      return;
-    }
     const config = loadLLMConfig();
-    if (!config?.provider || !config.model || !config.api_key) {
-      setAiError("请先在系统设置中配置 provider、模型和 API Key。");
-      return;
-    }
-    if (aiOperation === "append" && !selectedNode) {
-      setAiError("追加操作需要先在画布中选中一个节点。");
-      return;
-    }
+    if (!prompt) { setAiError("请先描述你想绘制或修改的内容。"); return; }
+    if (!config?.provider || !config.model || !config.api_key) { setAiError("请先在系统设置中配置 provider、模型和 API Key。"); return; }
+    if (aiOperation === "append" && !selectedNode) { setAiError("追加操作需要先选中一个节点。"); return; }
     aiAbortRef.current?.abort();
     const controller = new AbortController();
     aiAbortRef.current = controller;
     setAiBusy(true);
     setAiError("");
-    setAiPreview(null);
     try {
-      const response = await generateMindmap(
-        {
-          prompt,
-          operation: aiOperation,
-          template: aiTemplate,
-          direction: aiDirection,
-          compact: aiCompact,
-          selected_node_id: aiOperation === "append" ? selectedNode?.id : undefined,
-          current_data: aiOperation === "replace" ? undefined : snapshot,
-          provider: config.provider,
-          model: config.model,
-          api_key: config.api_key,
-        },
-        controller.signal,
-      );
-      if (!isSafeMindMapData(response.data)) {
-        throw new Error("模型返回的导图未通过安全校验。");
-      }
+      const response = await generateMindmap({ prompt, operation: aiOperation, template: aiTemplate, direction, compact, selected_node_id: aiOperation === "append" ? selectedNode?.id : undefined, current_data: aiOperation === "replace" ? undefined : snapshot, provider: config.provider, model: config.model, api_key: config.api_key }, controller.signal);
+      if (!isSafeMindMapData(response.data)) throw new Error("模型返回的导图未通过安全校验。");
       setAiPreview(response.data);
       setAiPreviewCount(response.node_count);
     } catch (cause) {
       if (cause instanceof DOMException && cause.name === "AbortError") return;
       setAiError(cause instanceof Error ? cause.message : "AI 生成失败，请稍后重试。");
     } finally {
-      if (aiAbortRef.current === controller) {
-        aiAbortRef.current = null;
-        setAiBusy(false);
-      }
+      if (aiAbortRef.current === controller) { aiAbortRef.current = null; setAiBusy(false); }
     }
   };
 
-  const style = selectedNode?.style;
-  const disabled = !ready;
+  const applyAiPreview = () => {
+    if (!aiPreview) return;
+    const aiPositions = aiPreview.meta?.positions ?? {};
+    const currentPositions = snapshot.meta?.positions ?? {};
+    const preserveCurrent = aiOperation !== "replace";
+    const merged: MindElixirData = {
+      ...aiPreview,
+      theme: snapshot.theme,
+      arrows: aiOperation === "replace" ? aiPreview.arrows : aiPreview.arrows ?? snapshot.arrows,
+      meta: {
+        ...(snapshot.meta ?? {}),
+        ...(aiPreview.meta ?? {}),
+        positions: preserveCurrent ? { ...aiPositions, ...currentPositions } : aiPositions,
+        viewport: snapshot.meta?.viewport,
+        layout: "free",
+      },
+    };
+    const mergedGraph = mindElixirDataToGraph(merged);
+    if (aiOperation === "append" && selectedNode) {
+      const selectedPosition = graph.nodes.find((node) => node.id === selectedNode.id)?.position ?? { x: 0, y: 0 };
+      const currentIds = new Set(graph.nodes.map((node) => node.id));
+      let newIndex = 0;
+      for (const node of mergedGraph.nodes) {
+        if (!currentIds.has(node.id)) {
+          node.position = { x: selectedPosition.x + 320, y: selectedPosition.y + newIndex * (compact ? 100 : 132) - 44 };
+          newIndex += 1;
+        }
+      }
+    }
+    replaceDocument(updateMindElixirDataPositions(merged, mergedGraph.nodes));
+    setPanel(null);
+    setAiPreview(null);
+  };
+
+  const fitCanvas = () => { void flowRef.current?.fitView({ padding: 0.24, duration: 240 }); };
+  const handleInit = (instance: ReactFlowInstance<MindMapCanvasNode, MindMapCanvasEdge>) => { flowRef.current = instance; };
+  const defaultViewport = useMemo<Viewport | undefined>(() => {
+    const viewport = snapshot.meta?.viewport;
+    if (!viewport || typeof viewport.x !== "number" || typeof viewport.y !== "number" || typeof viewport.zoom !== "number") return undefined;
+    return { x: viewport.x, y: viewport.y, zoom: viewport.zoom };
+  }, [snapshot.meta]);
+  const handleMoveEnd: OnMoveEnd = (_event, viewport) => {
+    setSnapshot((current) => ({ ...current, meta: { ...(current.meta ?? {}), viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom } } }));
+  };
+
+  const inspector = (
+    <aside className="mindmap-floating-sidebar absolute inset-y-3 right-3 z-30 flex w-[min(22rem,calc(100%-1.5rem))] flex-col bg-background/95 p-4 shadow-2xl" aria-label="节点检查器">
+      <div className="mb-4 flex items-center justify-between">
+        <div><p className="text-sm font-semibold">节点检查器</p><p className="text-xs text-muted-foreground">编辑内容与视觉样式</p></div>
+        <Button variant="ghost" size="sm" onClick={() => setPanel(null)} aria-label="关闭节点检查器"><X className="h-4 w-4" /></Button>
+      </div>
+      {selectedNode ? <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+        <section className="space-y-2"><div className="flex items-center gap-2 text-xs font-semibold"><Pencil className="h-3.5 w-3.5" />内容</div>
+          <TextArea value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} placeholder="节点备注…" rows={4} mono={false} maxLength={5000} />
+          <TextField value={linkDraft} onChange={(event) => setLinkDraft(event.target.value)} placeholder="https://example.com" type="url" maxLength={2000} />
+          <TextField value={tagsDraft} onChange={(event) => setTagsDraft(event.target.value)} placeholder="标签，用逗号分隔" maxLength={800} />
+          <TextField value={iconsDraft} onChange={(event) => setIconsDraft(event.target.value)} placeholder="图标，用空格分隔" maxLength={120} />
+          <div className="flex flex-wrap gap-1.5">{iconOptions.map((icon) => <Button key={icon} variant={parseIcons(iconsDraft).includes(icon) ? "primary" : "outline"} size="sm" onClick={() => setIconsDraft(parseIcons(iconsDraft).includes(icon) ? parseIcons(iconsDraft).filter((item) => item !== icon).join(" ") : [...parseIcons(iconsDraft), icon].join(" "))} aria-label={`切换${icon}图标`}>{icon}</Button>)}</div>
+          <Button variant="primary" size="sm" className="w-full" onClick={saveDetails}><Check className="h-3.5 w-3.5" />保存内容</Button>
+        </section>
+        <section className="space-y-2 border-t border-border pt-4"><div className="flex items-center gap-2 text-xs font-semibold"><Palette className="h-3.5 w-3.5" />样式</div>
+          <div className="grid grid-cols-2 gap-2"><label className="text-[11px] text-muted-foreground">文字<input type="color" value={colorInputValue(selectedNode.style?.color, "#1e293b")} onChange={(event) => applyStyle({ color: event.target.value })} className="mt-1 h-8 w-full rounded border border-input bg-background p-1" /></label><label className="text-[11px] text-muted-foreground">背景<input type="color" value={colorInputValue(selectedNode.style?.background, "#ffffff")} onChange={(event) => applyStyle({ background: event.target.value })} className="mt-1 h-8 w-full rounded border border-input bg-background p-1" /></label></div>
+          <div className="grid grid-cols-2 gap-2"><Select value={selectedNode.style?.fontSize ?? "16px"} onChange={(value) => applyStyle({ fontSize: value })} options={["14px", "16px", "18px", "20px", "24px", "28px"].map((value) => ({ value, label: value }))} ariaLabel="节点字号" /><Select value={selectedNode.style?.width ?? "auto"} onChange={(value) => applyStyle({ width: value === "auto" ? undefined : value })} options={[{ value: "auto", label: "自动宽度" }, { value: "160px", label: "窄卡片" }, { value: "220px", label: "标准卡片" }, { value: "280px", label: "宽卡片" }]} ariaLabel="节点宽度" /></div>
+          <div className="flex gap-2"><Button variant={selectedNode.style?.fontWeight === "bold" ? "primary" : "outline"} size="sm" onClick={() => applyStyle({ fontWeight: selectedNode.style?.fontWeight === "bold" ? "normal" : "bold" })}><Bold className="h-3.5 w-3.5" />粗体</Button><Button variant={selectedNode.style?.textDecoration === "underline" ? "primary" : "outline"} size="sm" onClick={() => applyStyle({ textDecoration: selectedNode.style?.textDecoration === "underline" ? "none" : "underline" })}><Underline className="h-3.5 w-3.5" />下划线</Button></div>
+        </section>
+      </div> : selectedEdge ? <div className="min-h-0 flex-1 space-y-4 overflow-y-auto"><section className="space-y-2"><div className="flex items-center gap-2 text-xs font-semibold"><Link2 className="h-3.5 w-3.5" />关系线</div><p className="text-xs text-muted-foreground">为关系线添加说明标签。层级线由节点结构自动维护。</p><TextField value={edgeLabelDraft} onChange={(event) => setEdgeLabelDraft(event.target.value)} placeholder="关系说明" maxLength={500} /><Button variant="primary" size="sm" className="w-full" onClick={saveEdgeLabel}><Check className="h-3.5 w-3.5" />保存关系线</Button></section></div> : <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">先选择节点或关系线，再编辑属性。</div>}
+    </aside>
+  );
+
+  const outlinePanel = (
+    <aside className="mindmap-floating-sidebar absolute inset-y-3 left-3 z-30 flex w-[min(19rem,calc(100%-1.5rem))] flex-col bg-background/95 p-4 shadow-2xl" aria-label="导图大纲">
+      <div className="mb-4 flex items-center justify-between"><div><p className="text-sm font-semibold">导图大纲</p><p className="text-xs text-muted-foreground">搜索并定位节点</p></div><Button variant="ghost" size="sm" onClick={() => setPanel(null)} aria-label="关闭导图大纲"><X className="h-4 w-4" /></Button></div>
+      <TextField value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索主题、备注或标签" aria-label="搜索思维导图" />
+      <div className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto">{outline.map(({ node, depth, path }) => <button key={node.id} type="button" onClick={() => { setSelectedIds([node.id]); updateNodeDrafts(node); setPanel(null); }} className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs hover:bg-muted" style={{ paddingLeft: `${8 + depth * 14}px` }}><span className="shrink-0 text-[10px] text-muted-foreground">{path}</span><span className="truncate">{node.topic}</span></button>)}{outline.length === 0 && <p className="p-3 text-xs text-muted-foreground">没有匹配的节点。</p>}</div>
+    </aside>
+  );
+
+  const aiPanel = (
+    <aside className="mindmap-floating-sidebar absolute inset-y-3 right-3 z-40 flex w-[min(28rem,calc(100%-1.5rem))] flex-col bg-background/98 p-4 shadow-2xl" aria-label="AI 思维导图助手">
+      <div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-lg bg-foreground text-background"><Bot className="h-4 w-4" /></span><div><p className="text-sm font-semibold">AI 思维导图助手</p><p className="text-xs text-muted-foreground">独立生成、预览，再应用到画布</p></div></div><Button variant="ghost" size="sm" onClick={() => { aiAbortRef.current?.abort(); setPanel(null); }} disabled={aiBusy} aria-label="关闭 AI 助手"><X className="h-4 w-4" /></Button></div>
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto"><div className="grid gap-2 sm:grid-cols-2"><Select value={aiOperation} onChange={(value) => { setAiOperation(value as MindmapOperation); setAiPreview(null); }} options={aiOperationOptions} ariaLabel="AI 操作" /><Select value={aiTemplate} onChange={(value) => { setAiTemplate(value as MindmapTemplate); setAiPreview(null); }} options={aiTemplateOptions.map(({ value, label }) => ({ value, label }))} ariaLabel="AI 模板" /></div><div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">{aiTemplateOptions.find(({ value }) => value === aiTemplate)?.description}{aiOperation === "append" && <span className="ml-2 font-medium text-foreground">{selectedNode ? `追加到：${selectedNode.topic}` : "请先选中节点"}</span>}</div><TextArea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} placeholder={aiOperation === "append" ? "例如：补充验收标准、风险和负责人…" : "例如：绘制一个网站发布计划，包含阶段、任务、负责人和风险…"} rows={6} mono={false} maxLength={8000} aria-label="描述要生成的思维导图" /><div className="flex items-start gap-2 rounded-lg border border-border p-3 text-xs text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" />API Key 只从本地系统设置读取，不写入导图、URL 或日志。</div>{aiError && <ErrorBox>{aiError}</ErrorBox>}{aiPreview && <div className="space-y-2 rounded-lg border border-brand/40 bg-brand/5 p-3"><div className="flex items-center justify-between text-sm font-semibold"><span className="flex items-center gap-2"><Sparkles className="h-4 w-4" />生成预览</span><span className="text-xs text-muted-foreground">{aiPreviewCount} 个节点</span></div><div className="max-h-48 overflow-y-auto rounded border border-border bg-background p-2">{flattenNodes(aiPreview.nodeData).slice(0, 40).map(({ node, depth, path }) => <div key={node.id} className="flex gap-2 py-1 text-xs" style={{ paddingLeft: `${depth * 14}px` }}><span className="text-muted-foreground">{path}</span><span className="truncate">{node.topic}</span></div>)}</div></div>}</div>
+      <footer className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">{aiBusy ? <Button variant="outline" size="sm" onClick={() => { aiAbortRef.current?.abort(); setAiBusy(false); }}><X className="h-3.5 w-3.5" />取消</Button> : <Button variant="outline" size="sm" onClick={() => setAiPreview(null)} disabled={!aiPreview}>清除预览</Button>}<Button variant="outline" size="sm" onClick={() => void generateWithAi()} disabled={aiBusy || !aiPrompt.trim()}><Send className="h-3.5 w-3.5" />{aiPreview ? "重新生成" : "生成预览"}</Button><Button variant="primary" size="sm" onClick={applyAiPreview} disabled={aiBusy || !aiPreview}><Check className="h-3.5 w-3.5" />应用到画布</Button></footer>
+    </aside>
+  );
 
   return (
-    <ToolShell icon={meta.icon} title={meta.name} description={meta.description} local wide>
-      <div className="flex h-[calc(100dvh-13rem)] min-h-[560px] flex-col gap-2.5">
+    <ToolShell icon={meta.icon} title={meta.name} description="自由摆放节点，保留结构关系；支持 AI、主题、导入导出" local wide>
+      <div className="-mt-4 flex h-[calc(100dvh-8rem)] min-h-[640px] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm">
         <input ref={inputRef} type="file" accept=".json,application/json" onChange={importMindmap} className="sr-only" />
-        <div className="flex flex-wrap items-center gap-1.5 border border-border bg-background px-2 py-2">
-          <span className="px-1 text-xs font-semibold text-muted-foreground">文件</span>
-          <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={disabled} aria-label="导入思维导图快照"><FileUp className="h-3.5 w-3.5" />导入</Button>
-          <Button variant="outline" size="sm" onClick={exportJson} disabled={disabled} aria-label="导出 JSON"><FileDown className="h-3.5 w-3.5" />JSON</Button>
-          <Button variant="outline" size="sm" onClick={() => exportOutline("markdown")} disabled={disabled} aria-label="导出 Markdown 大纲"><FileText className="h-3.5 w-3.5" />Markdown</Button>
-          <Button variant="outline" size="sm" onClick={() => exportOutline("text")} disabled={disabled} aria-label="导出纯文本大纲"><FileOutput className="h-3.5 w-3.5" />文本</Button>
-          <Button variant="outline" size="sm" onClick={() => void exportImage("svg")} disabled={disabled}>SVG</Button>
-          <Button variant="outline" size="sm" onClick={() => void exportImage("png")} disabled={disabled}>PNG</Button>
-          <Button variant="outline" size="sm" onClick={() => void resetMindmap()} disabled={disabled}><RotateCcw className="h-3.5 w-3.5" />新建</Button>
+        <header className="flex min-h-12 flex-wrap items-center gap-1.5 border-b border-border bg-card/90 px-3 py-2 backdrop-blur-md">
+          <div className="mr-2 flex min-w-0 items-center gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-muted"><GitBranch className="h-4 w-4" /></span><span className="max-w-40 truncate text-sm font-semibold">未命名思维导图</span><span className="hidden text-[11px] text-muted-foreground sm:inline">· 本地处理，不自动保存</span></div>
+          <Button variant="ghost" size="sm" onClick={undo} disabled={!history.length} aria-label="撤销"><Undo2 className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={redo} disabled={!future.length} aria-label="重做"><Redo2 className="h-4 w-4" /></Button>
           <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
-          <span className="px-1 text-xs font-semibold text-muted-foreground">编辑</span>
-          <Button variant="outline" size="sm" onClick={undo} disabled={disabled} aria-label="撤销"><Undo2 className="h-3.5 w-3.5" />撤销</Button>
-          <Button variant="outline" size="sm" onClick={redo} disabled={disabled} aria-label="重做"><Redo2 className="h-3.5 w-3.5" />重做</Button>
-          <Button variant="outline" size="sm" onClick={fitCanvas} disabled={disabled}><LocateFixed className="h-3.5 w-3.5" />适应画布</Button>
-          <Button variant="primary" size="sm" onClick={openAiAssistant} disabled={disabled}><Sparkles className="h-3.5 w-3.5" />AI 助手</Button>
-          <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
-          <span className="px-1 text-xs font-semibold text-muted-foreground">结构</span>
-          <Button variant="outline" size="sm" onClick={addChild} disabled={disabled}><Plus className="h-3.5 w-3.5" />子节点</Button>
-          <Button variant="outline" size="sm" onClick={addSibling} disabled={disabled}><GitBranch className="h-3.5 w-3.5" />同级</Button>
-          <Button variant="outline" size="sm" onClick={addParent} disabled={disabled}><Plus className="h-3.5 w-3.5" />父节点</Button>
-          <Button variant="outline" size="sm" onClick={editNode} disabled={disabled}><Pencil className="h-3.5 w-3.5" />编辑主题</Button>
-          <Button variant="outline" size="sm" onClick={moveUp} disabled={disabled} aria-label="节点上移"><MoveUp className="h-3.5 w-3.5" />上移</Button>
-          <Button variant="outline" size="sm" onClick={moveDown} disabled={disabled} aria-label="节点下移"><MoveDown className="h-3.5 w-3.5" />下移</Button>
-          <Button variant="outline" size="sm" onClick={() => toggleExpanded(false)} disabled={disabled}><FoldVertical className="h-3.5 w-3.5" />折叠</Button>
-          <Button variant="outline" size="sm" onClick={() => toggleExpanded(true)} disabled={disabled}><Expand className="h-3.5 w-3.5" />展开</Button>
-          <Button variant="destructive" size="sm" onClick={removeNode} disabled={disabled}><Trash2 className="h-3.5 w-3.5" />删除</Button>
-          <span className="mx-1 hidden h-5 w-px bg-border xl:block" />
-          <Button variant="outline" size="sm" onClick={() => setLeftPanelOpen((open) => !open)} className="xl:hidden" aria-expanded={leftPanelOpen}><PanelLeft className="h-3.5 w-3.5" />外观</Button>
-          <Button variant="outline" size="sm" onClick={() => setRightPanelOpen((open) => !open)} className="xl:hidden" aria-expanded={rightPanelOpen}><PanelRight className="h-3.5 w-3.5" />检查</Button>
-          <span className="ml-auto px-1 text-[11px] text-muted-foreground">{ready ? "本地处理 · 多选用于结构重排 · 不自动保存" : "正在加载思维导图…"}</span>
-        </div>
-
-        {error && <ErrorBox>{error}</ErrorBox>}
-
-        <div className="mindmap-editor relative min-h-0 flex-1 overflow-hidden border border-border bg-background">
-          <div className="grid h-full min-h-0 xl:grid-cols-[200px_minmax(0,1fr)_280px]">
-          <aside className={`z-20 min-h-0 overflow-y-auto border-r border-border bg-background p-3 xl:relative xl:z-auto xl:block xl:overflow-y-auto xl:shadow-none ${leftPanelOpen ? "absolute inset-y-0 left-0 block w-[min(19rem,calc(100%-1rem))] shadow-xl" : "hidden"}`}>
-            <div className="mb-3 flex items-center justify-between xl:hidden">
-              <span className="text-sm font-semibold">画布与外观</span>
-              <Button variant="ghost" size="sm" onClick={() => setLeftPanelOpen(false)} aria-label="关闭画布与外观面板"><X className="h-4 w-4" /></Button>
-            </div>
-            <div className="space-y-4">
-              <section className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-semibold"><Paintbrush className="h-4 w-4" />画布与节点</div>
-                <Select value={themeId} onChange={changeTheme} options={themeOptions} ariaLabel="选择主题和节点外观" />
-                <div className="flex flex-wrap gap-1.5" aria-label="主题预览">
-                  {themeOptions.map((option) => {
-                    const preset = getThemePreset(option.value);
-                    return <button key={option.value} type="button" onClick={() => changeTheme(option.value)} aria-label={`使用${option.label}`} aria-pressed={themeId === option.value} className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] transition-colors ${themeId === option.value ? "border-ring bg-accent text-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: preset.theme.palette[0] }} />{option.label}</button>;
-                  })}
-                </div>
-              </section>
-              <section className="space-y-2 border-t border-border pt-3">
-                <div className="flex items-center gap-2 text-sm font-semibold"><Layout className="h-4 w-4" />布局</div>
-                <Segmented value={direction} onChange={changeDirection} options={directionOptions} className="grid w-full grid-cols-2" />
-                <Button variant={compact ? "primary" : "outline"} size="sm" onClick={() => changeCompact(!compact)} className="w-full"><Columns2 className="h-3.5 w-3.5" />{compact ? "紧凑间距：已开启" : "紧凑间距：已关闭"}</Button>
-              </section>
-            </div>
-          </aside>
-          <div ref={containerRef} aria-label="思维导图画布，可拖拽并框选节点" className="mindmap-canvas min-h-0 min-w-0 bg-background" />
-          <aside className={`z-20 min-h-0 overflow-y-auto border-l border-border bg-background p-3 xl:relative xl:z-auto xl:block xl:overflow-y-auto xl:shadow-none ${rightPanelOpen ? "absolute inset-y-0 right-0 block w-[min(22rem,calc(100%-1rem))] shadow-xl" : "hidden"}`}>
-            <div className="mb-3 flex items-center justify-between xl:hidden">
-              <span className="text-sm font-semibold">节点检查器</span>
-              <Button variant="ghost" size="sm" onClick={() => setRightPanelOpen(false)} aria-label="关闭节点检查器"><X className="h-4 w-4" /></Button>
-            </div>
-            <div className="space-y-4">
-              <section className="space-y-2 border-t border-border pt-3">
-                <div className="flex items-center gap-2 text-sm font-semibold"><PanelRight className="h-4 w-4" />节点样式</div>
-                {selectedNode ? <>
-                  <p className="truncate text-xs text-muted-foreground">正在编辑：{selectedNode.topic}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="text-xs text-muted-foreground">文字颜色<input type="color" value={colorInputValue(style?.color, "#1e293b")} onChange={(event) => applyStyle({ color: event.target.value })} className="mt-1 h-9 w-full cursor-pointer rounded-md border border-input bg-background p-1" /></label>
-                    <label className="text-xs text-muted-foreground">背景颜色<input type="color" value={colorInputValue(style?.background, "#ffffff")} onChange={(event) => applyStyle({ background: event.target.value })} className="mt-1 h-9 w-full cursor-pointer rounded-md border border-input bg-background p-1" /></label>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Select value={style?.fontSize ?? "16px"} onChange={(value) => applyStyle({ fontSize: value })} options={["14px", "16px", "18px", "20px", "24px", "28px"].map((value) => ({ value, label: value }))} ariaLabel="节点字号" />
-                    <Select value={style?.width ?? "auto"} onChange={(value) => applyStyle({ width: value === "auto" ? undefined : value })} options={[{ value: "auto", label: "自动宽度" }, { value: "120px", label: "窄卡片" }, { value: "180px", label: "标准卡片" }, { value: "240px", label: "宽卡片" }]} ariaLabel="节点宽度" />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant={style?.fontWeight === "bold" ? "primary" : "outline"} size="sm" onClick={() => applyStyle({ fontWeight: style?.fontWeight === "bold" ? "normal" : "bold" })} aria-label="切换粗体"><Bold className="h-3.5 w-3.5" />粗体</Button>
-                    <Button variant={style?.textDecoration === "underline" ? "primary" : "outline"} size="sm" onClick={() => applyStyle({ textDecoration: style?.textDecoration === "underline" ? "none" : "underline" })} aria-label="切换下划线"><Underline className="h-3.5 w-3.5" />下划线</Button>
-                  </div>
-                  <Select value={style?.border ?? "none"} onChange={(value) => applyStyle({ border: value === "none" ? undefined : value })} options={[{ value: "none", label: "无边框" }, { value: "1px solid #94a3b8", label: "细边框" }, { value: "2px solid #2563eb", label: "强调边框" }]} ariaLabel="节点边框" />
-                  <label className="text-xs text-muted-foreground">分支颜色<input type="color" value={colorInputValue(selectedNode.branchColor, "#2563eb")} onChange={(event) => applyNodePatch({ branchColor: event.target.value })} className="mt-1 h-9 w-full cursor-pointer rounded-md border border-input bg-background p-1" /></label>
-                </> : <p className="rounded-lg bg-muted/50 px-3 py-3 text-xs text-muted-foreground">选择一个节点后，可以修改颜色、字号、边框和宽度。圆角、方形和高对比度外观可在上方主题中切换。</p>}
-              </section>
-
-              <section className="space-y-2 border-t border-border pt-3">
-                <div className="flex items-center gap-2 text-sm font-semibold"><StickyNote className="h-4 w-4" />备注与链接</div>
-                {selectedNode ? <>
-                  <TextArea value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} placeholder="记录这个节点的补充说明…" rows={3} mono={false} maxLength={5000} />
-                  <TextField value={linkDraft} onChange={(event) => setLinkDraft(event.target.value)} placeholder="https://example.com" type="url" maxLength={2000} />
-                  <div className="flex items-center gap-2"><Link2 className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="text-xs text-muted-foreground">仅保存安全的 http、https 或 mailto 链接</span></div>
-                </> : <p className="text-xs text-muted-foreground">选择节点后添加备注和超链接。</p>}
-              </section>
-
-              <section className="space-y-2 border-t border-border pt-3">
-                <div className="flex items-center gap-2 text-sm font-semibold"><Tag className="h-4 w-4" />标签与图标</div>
-                {selectedNode ? <>
-                  <TextField value={tagsDraft} onChange={(event) => setTagsDraft(event.target.value)} placeholder="标签，用逗号分隔" maxLength={800} />
-                  <TextField value={iconsDraft} onChange={(event) => setIconsDraft(event.target.value)} placeholder="节点标记，用空格分隔" maxLength={120} />
-                  <div className="flex flex-wrap gap-1.5">{iconOptions.map(({ value, label, Icon }) => <Button key={value} variant={parseIcons(iconsDraft).includes(value) ? "primary" : "outline"} size="sm" onClick={() => toggleIcon(value)} aria-label={`添加${label}标记`} title={label}><Icon className="h-3.5 w-3.5" /></Button>)}</div>
-                  <Button variant="primary" size="sm" onClick={saveDetails} className="w-full">保存备注、链接和标签</Button>
-                </> : <p className="text-xs text-muted-foreground">选择节点后添加标签或节点标记。</p>}
-              </section>
-
-              <section className="space-y-2 border-t border-border pt-3">
-                <div className="flex items-center gap-2 text-sm font-semibold"><Search className="h-4 w-4" />搜索与大纲</div>
-                <TextField value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索主题、备注或标签" aria-label="搜索思维导图" />
-                <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-border p-1">
-                  {outline.length > 0 ? outline.map(({ node, depth, path }) => <button key={node.id} type="button" onClick={() => focusOutline(node.id)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted" style={{ paddingLeft: `${8 + depth * 14}px` }}><span className="shrink-0 text-[10px] text-muted-foreground">{path}</span><span className="truncate">{node.topic}</span></button>) : <p className="px-2 py-3 text-xs text-muted-foreground">没有匹配的节点。</p>}
-                </div>
-              </section>
-            </div>
-          </aside>
+          <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} aria-label="导入 JSON"><FileUp className="h-3.5 w-3.5" />导入</Button><div className="group relative"><Button variant="outline" size="sm" aria-label="导出菜单"><Download className="h-3.5 w-3.5" />导出<ChevronDown className="h-3 w-3" /></Button><div className="invisible absolute right-0 top-full z-50 mt-1 w-36 rounded-lg border border-border bg-popover p-1 opacity-0 shadow-xl transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"><button type="button" onClick={exportJson} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-muted"><FileDown className="h-3.5 w-3.5" />JSON</button><button type="button" onClick={() => exportOutline("markdown")} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-muted"><FileText className="h-3.5 w-3.5" />Markdown</button><button type="button" onClick={() => exportOutline("text")} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-muted"><FileOutput className="h-3.5 w-3.5" />纯文本</button><button type="button" onClick={() => void exportImage("svg")} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-muted">SVG</button><button type="button" onClick={() => void exportImage("png")} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-muted">PNG</button></div></div>
+          <Button variant="outline" size="sm" onClick={resetMindmap} aria-label="新建导图"><RotateCcw className="h-3.5 w-3.5" />新建</Button><Button variant="primary" size="sm" onClick={openAi} aria-label="打开 AI 思维导图助手"><Sparkles className="h-3.5 w-3.5" />AI 助手</Button><Button variant="ghost" size="sm" onClick={() => setPanel(panel === "outline" ? null : "outline")} aria-label="打开导图大纲"><PanelLeft className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={openInspector} aria-label="打开节点检查器"><PanelRight className="h-4 w-4" /></Button>
+          <span className="ml-auto hidden text-[11px] text-muted-foreground lg:inline">{selectedIds.length ? `已选 ${selectedIds.length} 个节点` : "拖动节点自由摆放"}</span>
+        </header>
+        {error && <div className="absolute z-50 mx-3 mt-14 max-w-md"><ErrorBox>{error}</ErrorBox></div>}
+        <div className="relative min-h-0 flex-1">
+          <MindMapCanvas graph={graph} selectedIds={selectedIds} editingId={editingId} theme={snapshot.theme} {...callbacks} onNodesChange={handleNodesChange} onEdgesChange={handleEdgesChange} onNodeDragStop={handleNodeDragStop} onNodeClick={handleNodeClick} onEdgeClick={handleEdgeClick} onPaneClick={() => { setSelectedIds([]); setSelectedEdgeId(null); }} onConnect={handleConnect} onMoveEnd={handleMoveEnd} defaultViewport={defaultViewport} onInit={handleInit} />
+          <div className="mindmap-floating-toolbar absolute left-3 top-16 z-20 flex flex-col gap-1 rounded-xl border border-border bg-card/90 p-1.5 shadow-xl backdrop-blur-md" aria-label="画布工具">
+            <Button variant="ghost" size="sm" title="选择" aria-label="选择工具"><MousePointer2 className="h-4 w-4" /></Button><Button variant="ghost" size="sm" title="平移画布" aria-label="平移工具"><Hand className="h-4 w-4" /></Button><span className="my-0.5 h-px bg-border" /><Button variant="ghost" size="sm" onClick={() => addNode("child")} disabled={!selectedNode} title="添加子节点" aria-label="添加子节点"><Plus className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => addNode("sibling")} disabled={!selectedNode} title="添加同级节点" aria-label="添加同级节点"><GitBranch className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={openInspector} disabled={!selectedNode} title="节点属性" aria-label="节点属性"><Settings2 className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => setPanel(panel === "outline" ? null : "outline")} title="大纲搜索" aria-label="大纲搜索"><Search className="h-4 w-4" /></Button>
           </div>
+          <div className="absolute right-3 top-16 z-20 flex items-center gap-2 rounded-xl border border-border bg-card/90 p-1.5 shadow-xl backdrop-blur-md"><Select value={themeId} onChange={changeTheme} options={themeOptions} ariaLabel="画布主题" className="w-32" /><Button variant={compact ? "primary" : "ghost"} size="sm" onClick={() => changeCompact(!compact)} title="切换紧凑布局" aria-label="切换紧凑布局">紧凑</Button><Button variant={edgeKind === "relationship" ? "primary" : "ghost"} size="sm" onClick={() => setEdgeKind(edgeKind === "hierarchy" ? "relationship" : "hierarchy")} title={edgeKind === "hierarchy" ? "连接将创建层级边" : "连接将创建关系线"} aria-label="切换连接类型"><Link2 className="h-3.5 w-3.5" />{edgeKind === "hierarchy" ? "层级" : "关系"}</Button></div>
+          {selectedNode && <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-border bg-card/95 p-1.5 shadow-xl backdrop-blur-md"><span className="max-w-36 truncate px-2 text-xs font-medium">{selectedNode.topic}</span><Button variant="ghost" size="sm" onClick={() => { setEditingId(selectedNode.id); }} title="编辑主题" aria-label="编辑主题"><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" onClick={() => addNode("child")} title="添加子节点" aria-label="添加子节点"><Plus className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" onClick={() => addNode("sibling")} title="添加同级节点" aria-label="添加同级节点"><GitBranch className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" onClick={() => toggleExpanded()} title="折叠或展开" aria-label="折叠或展开">折叠</Button><Button variant="ghost" size="sm" onClick={() => moveSelected(-1)} title="同级上移" aria-label="同级上移"><ChevronUp className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" onClick={() => moveSelected(1)} title="同级下移" aria-label="同级下移"><ChevronDown className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" onClick={openInspector} title="打开检查器" aria-label="打开检查器"><PanelRight className="h-3.5 w-3.5" /></Button><Button variant="destructive" size="sm" onClick={removeSelected} title="删除节点" aria-label="删除节点"><Trash2 className="h-3.5 w-3.5" /></Button></div>}
+          <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1 rounded-lg border border-border bg-card/90 p-1 shadow-lg backdrop-blur-md"><Button variant={layoutMode === "free" ? "primary" : "ghost"} size="sm" onClick={() => setLayoutMode("free")} title="自由摆放" aria-label="自由摆放"><Maximize2 className="h-3.5 w-3.5" /></Button><div className="group relative"><Button variant="ghost" size="sm" title="自动布局" aria-label="自动布局"><Layout className="h-3.5 w-3.5" /><ChevronDown className="h-3 w-3" /></Button><div className="invisible absolute bottom-full left-0 mb-1 w-28 rounded-lg border border-border bg-popover p-1 opacity-0 shadow-xl transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">{directionOptions.map((option) => <button type="button" key={option.value} onClick={() => applyAutoLayout(option.value)} className="block w-full rounded px-2 py-1.5 text-left text-xs hover:bg-muted">{option.label}</button>)}</div></div><Button variant="ghost" size="sm" onClick={fitCanvas} title="适应画布" aria-label="适应画布"><LocateFixed className="h-3.5 w-3.5" /></Button><span className="hidden pl-1 text-[11px] text-muted-foreground sm:inline">{layoutMode === "free" ? "自由摆放" : `自动布局 · ${directionOptions.find((item) => item.value === direction)?.label}`}</span></div>
+          {panel === "outline" && outlinePanel}{panel === "inspector" && inspector}{panel === "ai" && aiPanel}
         </div>
-        {aiOpen && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-            role="presentation"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget && !aiBusy) setAiOpen(false);
-            }}
-          >
-            <section
-              className="flex max-h-[min(780px,calc(100dvh-2rem))] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="mindmap-ai-title"
-            >
-              <header className="flex items-center justify-between border-b border-border px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <Bot className="h-5 w-5 text-brand" />
-                  <div>
-                    <h2 id="mindmap-ai-title" className="text-sm font-semibold">AI 思维导图助手</h2>
-                    <p className="text-xs text-muted-foreground">自然语言生成，先预览再应用</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setAiOpen(false)} disabled={aiBusy} aria-label="关闭 AI 助手"><X className="h-4 w-4" /></Button>
-              </header>
-
-              <div className="min-h-0 space-y-4 overflow-y-auto p-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Select value={aiOperation} onChange={(value) => { setAiOperation(value as MindmapOperation); setAiPreview(null); }} options={aiOperationOptions} ariaLabel="选择 AI 操作" />
-                  <Select value={aiTemplate} onChange={(value) => { setAiTemplate(value as MindmapTemplate); setAiPreview(null); }} options={aiTemplateOptions.map(({ value, label }) => ({ value, label }))} ariaLabel="选择思维导图模板" />
-                </div>
-                <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                  {aiTemplateOptions.find(({ value }) => value === aiTemplate)?.description}
-                  {aiOperation === "append" && <span className="ml-2 font-medium text-foreground">{selectedNode ? `当前追加到：${selectedNode.topic}` : "请先选中一个节点"}</span>}
-                  {aiOperation !== "replace" && <span className="ml-2">当前导图内容会发送给已配置的模型。</span>}
-                </div>
-                <TextArea
-                  value={aiPrompt}
-                  onChange={(event) => setAiPrompt(event.target.value)}
-                  placeholder={aiOperation === "append" ? "例如：补充验收标准、风险和负责人…" : "例如：绘制一个网站发布计划，包含阶段、任务、负责人和风险…"}
-                  rows={5}
-                  mono={false}
-                  maxLength={8000}
-                  aria-label="描述要生成的思维导图"
-                />
-                <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                  <Segmented value={aiDirection} onChange={(value) => setAiDirection(value as DirectionId)} options={directionOptions} className="grid grid-cols-2" />
-                  <Button variant={aiCompact ? "primary" : "outline"} size="sm" onClick={() => setAiCompact((value) => !value)}><Columns2 className="h-3.5 w-3.5" />{aiCompact ? "紧凑" : "宽松"}</Button>
-                </div>
-                <div className="flex items-start gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground">
-                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-                  <span>模型只返回受限的节点结构。API Key 复用系统设置中的本地配置，不会写入导图或 URL；应用前可取消。</span>
-                </div>
-                {aiError && <ErrorBox>{aiError}</ErrorBox>}
-
-                {aiPreview && (
-                  <div className="space-y-2 rounded-lg border border-brand/40 bg-brand/5 p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4" />生成预览</div>
-                      <span className="text-xs text-muted-foreground">{aiPreviewCount} 个节点</span>
-                    </div>
-                    <div className="max-h-44 overflow-y-auto rounded-md border border-border bg-background p-2">
-                      {flattenNodes(aiPreview.nodeData).slice(0, 30).map(({ node, depth, path }) => (
-                        <div key={node.id} className="flex gap-2 py-1 text-xs" style={{ paddingLeft: `${depth * 14}px` }}>
-                          <span className="shrink-0 text-muted-foreground">{path}</span>
-                          <span className="truncate">{node.topic}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3">
-                {aiBusy ? (
-                  <Button variant="outline" size="sm" onClick={cancelAiGeneration}><X className="h-3.5 w-3.5" />取消生成</Button>
-                ) : (
-                  <Button variant="outline" size="sm" onClick={() => setAiPreview(null)} disabled={!aiPreview}><RotateCw className="h-3.5 w-3.5" />清除预览</Button>
-                )}
-                <Button variant="outline" size="sm" onClick={() => void generateWithAi()} disabled={aiBusy || !aiPrompt.trim()}><Send className="h-3.5 w-3.5" />{aiPreview ? "重新生成" : "生成预览"}</Button>
-                <Button variant="primary" size="sm" onClick={applyAiPreview} disabled={aiBusy || !aiPreview}><Check className="h-3.5 w-3.5" />应用到画布</Button>
-              </footer>
-            </section>
-          </div>
-        )}
+        <footer className="flex min-h-9 items-center justify-between border-t border-border bg-card/70 px-3 text-[11px] text-muted-foreground"><span>拖拽节点到任意位置 · Shift 框选 · 双击或 Enter 编辑</span><span className="hidden items-center gap-2 sm:flex"><button type="button" onClick={() => void flowRef.current?.zoomOut()} aria-label="缩小"><ZoomOut className="h-3.5 w-3.5" /></button><span>画布</span><button type="button" onClick={() => void flowRef.current?.zoomIn()} aria-label="放大"><ZoomIn className="h-3.5 w-3.5" /></button></span></footer>
       </div>
     </ToolShell>
   );

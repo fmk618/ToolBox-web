@@ -3,6 +3,92 @@ import type { MindElixirData, NodeObj, TagObj, Theme } from "mind-elixir";
 export type ThemePresetId = "latte" | "ocean" | "forest" | "dark" | "contrast" | "square";
 export type DirectionId = "right" | "left" | "side" | "down";
 
+/** A position accepted by a free-canvas graph implementation. */
+export type CanvasPosition = {
+  x: number;
+  y: number;
+};
+
+export type MindMapPositions = Record<string, CanvasPosition>;
+export type MindMapLayoutId = "mindmap" | "tree" | "free";
+
+/**
+ * Viewport metadata is deliberately small and numeric so it can be persisted
+ * in a MindElixir snapshot without becoming a CSS or HTML escape hatch.
+ */
+export type MindMapCanvasMeta = {
+  x?: number;
+  y?: number;
+  zoom?: number;
+  width?: number;
+  height?: number;
+  panX?: number;
+  panY?: number;
+  background?: string;
+  grid?: "dots" | "lines" | "none";
+  gridColor?: string;
+};
+
+export type MindMapMeta = {
+  mindmapTheme?: string;
+  layout?: MindMapLayoutId;
+  positions?: MindMapPositions;
+  canvas?: MindMapCanvasMeta;
+  viewport?: MindMapCanvasMeta;
+  [key: string]: unknown;
+};
+
+/**
+ * These types intentionally mirror the small part of a React Flow node/edge
+ * used by the converter. Keeping them local means the data layer stays usable
+ * by other canvas implementations and does not pull React into lib.ts.
+ */
+export type MindMapGraphNodeData = {
+  label: string;
+  node: NodeObj;
+};
+
+export type MindMapGraphNode = {
+  id: string;
+  type?: string;
+  position: CanvasPosition;
+  data: MindMapGraphNodeData;
+};
+
+export type MindMapGraphEdgeData = {
+  kind?: "hierarchy" | "relationship";
+  label?: string;
+  bidirectional?: boolean;
+  style?: {
+    stroke?: string;
+    strokeWidth?: string | number;
+    strokeDasharray?: string;
+    opacity?: string | number;
+    labelColor?: string;
+  };
+};
+
+export type MindMapGraphEdge = {
+  id: string;
+  source: string;
+  target: string;
+  type?: string;
+  data?: MindMapGraphEdgeData;
+};
+
+export type MindMapGraph = {
+  nodes: MindMapGraphNode[];
+  edges: MindMapGraphEdge[];
+};
+
+const MAX_CANVAS_COORDINATE = 10_000_000;
+const MAX_CANVAS_ZOOM = 10;
+const MIN_CANVAS_ZOOM = 0.05;
+const MAX_META_KEYS = 64;
+const MAX_POSITION_ENTRIES = 10_000;
+const INITIAL_LAYOUT_X_GAP = 280;
+const INITIAL_LAYOUT_Y_GAP = 120;
+
 export type OutlineNode = {
   node: NodeObj;
   depth: number;
@@ -219,6 +305,334 @@ export function flattenNodes(root: NodeObj): OutlineNode[] {
   return result;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isSafeCanvasCoordinate(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= MAX_CANVAS_COORDINATE;
+}
+
+function isSafeCanvasPosition(value: unknown): value is CanvasPosition {
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== "x" && key !== "y")) return false;
+  return isSafeCanvasCoordinate(value.x) && isSafeCanvasCoordinate(value.y);
+}
+
+/** Return only well-formed positions; malformed metadata is ignored by layout. */
+function storedPositions(data: MindElixirData): Record<string, CanvasPosition> {
+  const meta = data.meta;
+  if (!isRecord(meta) || !isRecord(meta.positions)) return {};
+  const positions: Record<string, CanvasPosition> = {};
+  for (const [id, value] of Object.entries(meta.positions)) {
+    if (id.length <= 200 && isSafeCanvasPosition(value)) {
+      positions[id] = { x: value.x, y: value.y };
+    }
+  }
+  return positions;
+}
+
+/**
+ * Produce a deterministic tree layout for snapshots created before free-canvas
+ * positions existed. Nodes at the same depth have a fixed vertical separation;
+ * parent nodes are placed at the midpoint of their children. The output is
+ * centered around y=0 and therefore remains stable across renders.
+ */
+export function createInitialMindMapPositions(root: NodeObj): MindMapPositions {
+  const positions: MindMapPositions = {};
+  const visiting = new Set<NodeObj>();
+  const ids = new Set<string>();
+  let leafIndex = 0;
+
+  const visit = (node: NodeObj, depth: number): number => {
+    if (visiting.has(node)) throw new Error("无法为循环思维导图生成布局。");
+    if (ids.has(node.id)) throw new Error(`思维导图包含重复节点 ID：${node.id}`);
+    visiting.add(node);
+    ids.add(node.id);
+    const children = node.children ?? [];
+    let y: number;
+    if (children.length === 0) {
+      y = leafIndex * INITIAL_LAYOUT_Y_GAP;
+      leafIndex += 1;
+    } else {
+      const childY = children.map((child) => visit(child, depth + 1));
+      y = childY.reduce((sum, item) => sum + item, 0) / childY.length;
+    }
+    positions[node.id] = { x: depth * INITIAL_LAYOUT_X_GAP, y };
+    visiting.delete(node);
+    return y;
+  };
+
+  visit(root, 0);
+  const yOffset = ((leafIndex - 1) * INITIAL_LAYOUT_Y_GAP) / 2;
+  for (const position of Object.values(positions)) position.y -= yOffset;
+  return positions;
+}
+
+/** Alias with a shorter name for canvas integrations. */
+export const createInitialGraphPositions = createInitialMindMapPositions;
+
+export function createAutoLayoutPositions(
+  root: NodeObj,
+  direction: DirectionId,
+  compact = false,
+): MindMapPositions {
+  const gapX = compact ? 220 : 300;
+  const gapY = compact ? 88 : 132;
+  const positions: MindMapPositions = {};
+  const leafIndex = { value: 0 };
+
+  const visit = (node: NodeObj, depth: number, side = 1): number => {
+    const children = node.children ?? [];
+    if (children.length === 0) {
+      const y = leafIndex.value * gapY;
+      leafIndex.value += 1;
+      positions[node.id] = { x: depth * gapX * side, y };
+      return y;
+    }
+    const childYs = children.map((child, index) => {
+      const childSide = direction === "side" && depth === 0 ? (index % 2 === 0 ? -1 : 1) : side;
+      return visit(child, depth + 1, childSide);
+    });
+    const y = (childYs[0] + childYs[childYs.length - 1]) / 2;
+    positions[node.id] = { x: depth * gapX * side, y };
+    return y;
+  };
+
+  visit(root, 0, direction === "left" ? -1 : 1);
+  const offset = leafIndex.value > 0 ? ((leafIndex.value - 1) * gapY) / 2 : 0;
+  for (const position of Object.values(positions)) position.y -= offset;
+  if (direction === "down") {
+    for (const position of Object.values(positions)) {
+      const x = position.x;
+      position.x = position.y;
+      position.y = x;
+    }
+  }
+  return positions;
+}
+
+export const createLayoutPositions = createAutoLayoutPositions;
+
+function positionsForData(data: MindElixirData): MindMapPositions {
+  const generated = createInitialMindMapPositions(data.nodeData);
+  const stored = storedPositions(data);
+  const positions: MindMapPositions = {};
+  const occupied = new Set<string>();
+  for (const { node } of flattenNodes(data.nodeData)) {
+    const candidate = stored[node.id] ?? generated[node.id];
+    if (!candidate) continue;
+    let position = { x: candidate.x, y: candidate.y };
+    // Preserve valid saved positions. If old/partial metadata repeats a point,
+    // move only the later node by one layout column so the initial canvas is
+    // still usable and deterministic.
+    while (occupied.has(`${position.x}:${position.y}`)) {
+      position = { x: position.x + INITIAL_LAYOUT_X_GAP, y: position.y };
+    }
+    occupied.add(`${position.x}:${position.y}`);
+    positions[node.id] = position;
+  }
+  return positions;
+}
+
+/** Convert a MindElixir tree to nodes and parent-child edges for a free canvas. */
+export function mindElixirDataToGraph(data: MindElixirData): MindMapGraph {
+  const positions = positionsForData(data);
+  const nodes: MindMapGraphNode[] = [];
+  const edges: MindMapGraphEdge[] = [];
+  const ids = new Set<string>();
+
+  const visit = (node: NodeObj, parentId?: string): void => {
+    if (ids.has(node.id)) throw new Error(`思维导图包含重复节点 ID：${node.id}`);
+    ids.add(node.id);
+    nodes.push({
+      id: node.id,
+      type: "mindmap",
+      position: positions[node.id] ?? { x: 0, y: 0 },
+      data: { label: node.topic, node },
+    });
+    if (parentId) {
+      edges.push({ id: `${parentId}->${node.id}`, source: parentId, target: node.id, data: { kind: "hierarchy" } });
+    }
+    node.children?.forEach((child) => visit(child, node.id));
+  };
+  visit(data.nodeData);
+  for (const arrow of data.arrows ?? []) {
+    if (ids.has(arrow.from) && ids.has(arrow.to)) {
+      edges.push({
+        id: arrow.id,
+        source: arrow.from,
+        target: arrow.to,
+        data: {
+          kind: "relationship",
+          label: arrow.label,
+          bidirectional: arrow.bidirectional,
+          style: arrow.style,
+        },
+      });
+    }
+  }
+  return { nodes, edges };
+}
+
+/** A concise alias used by adapters that do not mention MindElixir by name. */
+export const mindElixirToGraph = mindElixirDataToGraph;
+
+/** Extract finite graph coordinates in node order for persistence in meta.positions. */
+export function positionsFromGraphNodes(nodes: readonly MindMapGraphNode[]): MindMapPositions {
+  const positions: MindMapPositions = {};
+  for (const node of nodes) {
+    if (typeof node.id !== "string" || node.id.length > 200) continue;
+    if (isSafeCanvasPosition(node.position)) {
+      positions[node.id] = { x: node.position.x, y: node.position.y };
+    }
+  }
+  return positions;
+}
+
+/** Return a snapshot with current free-canvas coordinates persisted in meta. */
+export function updateMindElixirDataPositions(
+  data: MindElixirData,
+  nodes: readonly MindMapGraphNode[],
+): MindElixirData {
+  const positions = positionsFromGraphNodes(nodes);
+  return {
+    ...data,
+    meta: {
+      ...(isRecord(data.meta) ? data.meta : {}),
+      positions,
+    },
+  };
+}
+
+export const withGraphPositions = updateMindElixirDataPositions;
+
+function findNodeById(root: NodeObj, id: string): NodeObj | undefined {
+  if (root.id === id) return root;
+  for (const child of root.children ?? []) {
+    const found = findNodeById(child, id);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function graphNodeSource(node: MindMapGraphNode, baseData: MindElixirData | undefined): NodeObj {
+  const candidate = node.data?.node;
+  if (candidate && typeof candidate === "object") return candidate;
+  const fromBase = baseData && findNodeById(baseData.nodeData, node.id);
+  if (fromBase) return fromBase;
+  const label = node.data?.label;
+  if (typeof label !== "string") throw new Error(`画布节点缺少主题：${node.id}`);
+  return { id: node.id, topic: label };
+}
+
+function copyGraphNode(source: NodeObj, id: string, fallbackTopic: string): NodeObj {
+  const rest = { ...source };
+  delete rest.children;
+  delete rest.parent;
+  delete rest.dangerouslySetInnerHTML;
+  return {
+    ...rest,
+    id,
+    topic: typeof rest.topic === "string" ? rest.topic : fallbackTopic,
+  };
+}
+
+function validateGraphNode(node: MindMapGraphNode): void {
+  if (!node || typeof node.id !== "string" || node.id.length === 0 || node.id.length > 200) {
+    throw new Error("画布节点 ID 无效。");
+  }
+  if (!isSafeCanvasPosition(node.position)) throw new Error(`画布节点位置无效：${node.id}`);
+}
+
+/**
+ * Rebuild a MindElixir tree from graph nodes and hierarchy edges. Existing
+ * snapshot fields (theme, direction, arrows, summaries and other metadata) are
+ * retained, while meta.positions is replaced with the current graph positions.
+ */
+export function graphNodesToMindElixirData(
+  nodes: readonly MindMapGraphNode[],
+  edges: readonly MindMapGraphEdge[],
+  baseData?: MindElixirData,
+): MindElixirData {
+  if (nodes.length === 0) throw new Error("画布至少需要一个节点。");
+  const nodeById = new Map<string, MindMapGraphNode>();
+  for (const node of nodes) {
+    validateGraphNode(node);
+    if (nodeById.has(node.id)) throw new Error(`画布包含重复节点 ID：${node.id}`);
+    nodeById.set(node.id, node);
+  }
+
+  const childrenById = new Map<string, string[]>();
+  const parentById = new Map<string, string>();
+  const hierarchyEdges = edges.filter((edge) => edge.data?.kind !== "relationship");
+  const relationshipEdges = edges.filter((edge) => edge.data?.kind === "relationship");
+  for (const edge of hierarchyEdges) {
+    if (!edge || typeof edge.id !== "string" || edge.id.length > 400) throw new Error("画布边无效。");
+    if (!nodeById.has(edge.source) || !nodeById.has(edge.target) || edge.source === edge.target) {
+      throw new Error(`画布边引用了不存在或相同的节点：${edge.id}`);
+    }
+    if (parentById.has(edge.target)) throw new Error(`节点存在多个父节点：${edge.target}`);
+    parentById.set(edge.target, edge.source);
+    const children = childrenById.get(edge.source) ?? [];
+    children.push(edge.target);
+    childrenById.set(edge.source, children);
+  }
+  for (const edge of relationshipEdges) {
+    if (!edge || typeof edge.id !== "string" || edge.id.length > 400) throw new Error("画布关系线无效。");
+    if (!nodeById.has(edge.source) || !nodeById.has(edge.target) || edge.source === edge.target) {
+      throw new Error(`画布关系线引用了不存在或相同的节点：${edge.id}`);
+    }
+  }
+
+  const roots = nodes.filter((node) => !parentById.has(node.id));
+  if (roots.length !== 1) throw new Error("画布必须恰好包含一个根节点。");
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const build = (id: string): NodeObj => {
+    if (visiting.has(id)) throw new Error("画布层级边包含循环。");
+    if (visited.has(id)) throw new Error(`画布节点被重复连接：${id}`);
+    const graphNode = nodeById.get(id)!;
+    visiting.add(id);
+    const source = graphNodeSource(graphNode, baseData);
+    const result = copyGraphNode(source, id, graphNode.data?.label ?? id);
+    const childIds = childrenById.get(id) ?? [];
+    if (childIds.length > 0) result.children = childIds.map((childId) => build(childId));
+    visiting.delete(id);
+    visited.add(id);
+    return result;
+  };
+
+  const nodeData = build(roots[0].id);
+  if (visited.size !== nodes.length) throw new Error("画布包含无法从根节点到达的节点。");
+  const nextMeta: MindMapMeta = {
+    ...(isRecord(baseData?.meta) ? baseData.meta : {}),
+    positions: positionsFromGraphNodes(nodes),
+  };
+  const arrows = relationshipEdges.map((edge) => ({
+    id: edge.id,
+    label: edge.data?.label ?? "",
+    from: edge.source,
+    to: edge.target,
+    bidirectional: edge.data?.bidirectional,
+    style: edge.data?.style,
+  }));
+  return {
+    ...(baseData ?? {}),
+    nodeData,
+    arrows,
+    meta: nextMeta,
+  };
+}
+
+export function graphToMindElixirData(
+  graph: MindMapGraph,
+  baseData?: MindElixirData,
+): MindElixirData {
+  return graphNodesToMindElixirData(graph.nodes, graph.edges, baseData);
+}
+
+export const graphToMindMapData = graphToMindElixirData;
+
 export function filterOutline(nodes: OutlineNode[], query: string): OutlineNode[] {
   const normalized = query.trim().toLocaleLowerCase();
   if (!normalized) return nodes;
@@ -269,6 +683,70 @@ export function isSafeHyperlink(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+/** Validate the bounded viewport fields persisted for a free canvas. */
+export function isSafeCanvasMeta(value: unknown): value is MindMapCanvasMeta {
+  if (!isRecord(value) || Object.keys(value).length > 8) return false;
+  const allowed = new Set(["x", "y", "zoom", "width", "height", "panX", "panY"]);
+  for (const [key, item] of Object.entries(value)) {
+    if (!allowed.has(key) || typeof item !== "number" || !Number.isFinite(item)) return false;
+    if (["width", "height"].includes(key)) {
+      if (item < 0 || item > MAX_CANVAS_COORDINATE) return false;
+    } else if (key === "zoom") {
+      if (item < MIN_CANVAS_ZOOM || item > MAX_CANVAS_ZOOM) return false;
+    } else if (Math.abs(item) > MAX_CANVAS_COORDINATE) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Validate the position map and reject prototype-pollution keys. */
+export function isSafeMindMapPositions(value: unknown): value is MindMapPositions {
+  if (!isRecord(value) || Object.keys(value).length > MAX_POSITION_ENTRIES) return false;
+  for (const [id, position] of Object.entries(value)) {
+    if (!id || id.length > 200 || ["__proto__", "constructor", "prototype"].includes(id)) return false;
+    if (!isSafeCanvasPosition(position)) return false;
+  }
+  return true;
+}
+
+function isSafeMetaValue(value: unknown, depth: number): boolean {
+  if (value === null || value === undefined || typeof value === "boolean") return true;
+  if (typeof value === "string") return value.length <= 5000 && !/[<>]/.test(value);
+  if (typeof value === "number") return Number.isFinite(value) && Math.abs(value) <= MAX_CANVAS_COORDINATE;
+  if (depth >= 4 || !isRecord(value)) {
+    if (Array.isArray(value)) return value.length <= 100 && depth < 4 && value.every((item) => isSafeMetaValue(item, depth + 1));
+    return false;
+  }
+  const keys = Object.keys(value);
+  if (keys.length > 64 || keys.some((key) => ["__proto__", "constructor", "prototype"].includes(key))) return false;
+  return keys.every((key) => isSafeMetaValue(value[key], depth + 1));
+}
+
+/**
+ * Validate extension metadata while retaining support for harmless custom
+ * fields. Layout, canvas, viewport and positions have stricter schemas because
+ * those values are consumed directly by canvas code.
+ */
+export function isSafeMindMapMeta(value: unknown): value is MindMapMeta {
+  if (!isRecord(value) || Object.keys(value).length > MAX_META_KEYS) return false;
+  for (const [key, item] of Object.entries(value)) {
+    if (["__proto__", "constructor", "prototype"].includes(key)) return false;
+    if (key === "mindmapTheme") {
+      if (typeof item !== "string" || item.length > 100 || /[<>]/.test(item)) return false;
+    } else if (key === "layout") {
+      if (item !== "mindmap" && item !== "tree" && item !== "free") return false;
+    } else if (key === "positions") {
+      if (!isSafeMindMapPositions(item)) return false;
+    } else if (key === "canvas" || key === "viewport") {
+      if (!isSafeCanvasMeta(item)) return false;
+    } else if (!isSafeMetaValue(item, 0)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function isSafeStyleValue(value: unknown): value is string {
@@ -345,6 +823,7 @@ export function isSafeMindMapData(value: unknown): value is MindElixirData {
   if (data.direction !== undefined && ![0, 1, 2, 3].includes(data.direction)) return false;
   if (data.compact !== undefined && typeof data.compact !== "boolean") return false;
   if (data.theme !== undefined && !isSafeTheme(data.theme)) return false;
+  if (data.meta !== undefined && !isSafeMindMapMeta(data.meta)) return false;
   return isSafeRelationshipData(data as MindElixirData);
 }
 

@@ -11,29 +11,36 @@ export const CODE_OUTPUT_BACKGROUNDS = {
     label: "浅色",
     background: "#f8fafc",
     foreground: "#0f172a",
-    border: "#cbd5e1",
-    gutter: "#64748b",
+    border: "#64748b",
+    gutter: "#475569",
   },
   dark: {
     label: "深色",
     background: "#111827",
-    foreground: "#e5e7eb",
-    border: "#374151",
-    gutter: "#9ca3af",
+    foreground: "#f9fafb",
+    border: "#9ca3af",
+    gutter: "#d1d5db",
   },
   blue: {
     label: "深蓝",
     background: "#172554",
     foreground: "#dbeafe",
-    border: "#1e40af",
+    border: "#60a5fa",
     gutter: "#93c5fd",
   },
   purple: {
     label: "紫色",
     background: "#2e1065",
     foreground: "#ede9fe",
-    border: "#6d28d9",
+    border: "#a78bfa",
     gutter: "#c4b5fd",
+  },
+  highContrast: {
+    label: "高对比度",
+    background: "#ffffff",
+    foreground: "#000000",
+    border: "#000000",
+    gutter: "#000000",
   },
 } as const;
 
@@ -65,7 +72,7 @@ export function CodeOutput({
   const lines = value ? value.split("\n") : [];
 
   return (
-    <section className="space-y-2" aria-label={label}>
+    <section className="code-output space-y-2" aria-label={label}>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex min-w-0 items-baseline gap-2">
           <div className="truncate text-sm font-medium text-foreground">{label}</div>
@@ -102,20 +109,20 @@ export function CodeOutput({
         <ErrorBox>{error}</ErrorBox>
       ) : (
         <div
-          className="min-h-[24rem] max-h-[42rem] min-w-0 overflow-auto rounded-xl border"
+          className="code-output-surface min-h-[24rem] max-h-[42rem] min-w-0 overflow-auto rounded-xl border"
           style={{ backgroundColor: colors.background, borderColor: colors.border }}
         >
           <div className="flex min-h-full min-w-max">
             <div
               aria-hidden="true"
-              className="sticky left-0 z-10 shrink-0 select-none border-r px-3 py-3 text-right font-mono text-xs leading-6"
+              className="code-output-gutter sticky left-0 z-10 shrink-0 select-none border-r px-3 py-3 text-right font-mono text-xs leading-6"
               style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.gutter }}
             >
               {lines.length ? lines.map((_, index) => <div key={index}>{index + 1}</div>) : <div>—</div>}
             </div>
             <pre
               aria-label={`${label}内容`}
-              className="m-0 min-w-max flex-1 whitespace-pre px-4 py-3 font-mono text-sm leading-6"
+              className="code-output-content m-0 min-w-max flex-1 whitespace-pre px-4 py-3 font-mono text-sm leading-6 [font-variant-ligatures:none]"
               style={{ color: colors.foreground }}
             >
               {value || placeholder}

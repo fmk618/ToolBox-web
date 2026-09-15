@@ -3,10 +3,11 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Shell } from "../components/shell/shell";
 import { BRAND_DESCRIPTION, BRAND_NAME } from "../lib/brand";
-import "./globals.css";
 import "@excalidraw/excalidraw/index.css";
 import "@univerjs/preset-sheets-core/lib/index.css";
+import "@xyflow/react/dist/style.css";
 import "mind-elixir/style";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
