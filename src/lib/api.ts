@@ -58,7 +58,104 @@ export async function testLLMSettings(
   return res.json();
 }
 
-export type MindmapOperation = "replace" | "append" | "refine";
+export type VideoMetadataResponse = {
+  metadata: {
+    video_id: string;
+    title: string;
+    author: string;
+    thumbnail_url: string | null;
+    source_url: string;
+    duration: number | null;
+    provider: string;
+  };
+  warnings: string[];
+};
+
+export type CaptionsResponse = {
+  video_id: string;
+  language_code: string | null;
+  is_generated: boolean | null;
+  segments: { start: number; end: number; text: string }[];
+  transcript: string;
+  transcript_source: "caption" | "none";
+  warnings: string[];
+};
+
+export async function extractVideoMetadata(
+  url: string,
+  signal?: AbortSignal,
+): Promise<VideoMetadataResponse> {
+  const res = await fetch(`${getApiBase()}/tools/video-extract/metadata`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+    signal,
+  });
+  if (!res.ok) throw new Error(await readErrorMessage(res.status, res));
+  return res.json();
+}
+
+export async function extractVideoCaptions(
+  url: string,
+  languages = ["zh-Hans", "zh", "en"],
+  signal?: AbortSignal,
+): Promise<CaptionsResponse> {
+  const res = await fetch(`${getApiBase()}/tools/video-extract/captions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, languages }),
+    signal,
+  });
+  if (!res.ok) throw new Error(await readErrorMessage(res.status, res));
+  return res.json();
+}
+
+export type MediaJobResponse = { job_id: string; status: string; progress: number };
+export type MediaJobStatusResponse = MediaJobResponse & {
+  error?: string | null;
+  filename?: string | null;
+  media_type?: string | null;
+};
+
+export async function submitMediaJob(
+  path: string,
+  file: File | null,
+  fields: Record<string, string> = {},
+): Promise<MediaJobResponse> {
+  const form = new FormData();
+  if (file) form.append("file", file);
+  Object.entries(fields).forEach(([key, value]) => form.append(key, value));
+  const res = await fetch(`${getApiBase()}${path}`, { method: "POST", body: form });
+  if (!res.ok) throw new Error(await readErrorMessage(res.status, res));
+  return res.json();
+}
+
+export async function pollMediaJob(path: string, jobId: string): Promise<MediaJobStatusResponse> {
+  const res = await fetch(`${getApiBase()}${path}/${encodeURIComponent(jobId)}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(await readErrorMessage(res.status, res));
+  return res.json();
+}
+
+export async function cancelMediaJob(path: string, jobId: string): Promise<void> {
+  const res = await fetch(`${getApiBase()}${path}/${encodeURIComponent(jobId)}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await readErrorMessage(res.status, res));
+}
+
+export async function downloadMediaJob(
+  path: string,
+  jobId: string,
+  fallbackFilename: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetch(`${getApiBase()}${path}/${encodeURIComponent(jobId)}/result`);
+  if (!res.ok) throw new Error(await readErrorMessage(res.status, res));
+  const header = res.headers.get("content-disposition") ?? "";
+  const match = header.match(/filename[^;=\\n]*=((['"]).*?\\2|[^;\\n]*)/);
+  return {
+    blob: await res.blob(),
+    filename: match?.[1]?.replace(/[\"']/g, "") || fallbackFilename,
+  };
+}
+
 export type MindmapTemplate =
   | "project-plan"
   | "meeting-notes"
@@ -68,6 +165,8 @@ export type MindmapTemplate =
   | "org-chart"
   | "research-report"
   | "course-outline";
+
+export type MindmapOperation = "replace" | "append" | "refine";
 
 export type MindmapGenerateBody = {
   prompt: string;
