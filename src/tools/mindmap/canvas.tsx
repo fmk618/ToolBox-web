@@ -298,7 +298,7 @@ export function MindMapCanvas({
         nodesDraggable
         nodesConnectable
         elementsSelectable
-        selectionOnDrag
+        selectionOnDrag={false}
         panOnDrag={interactionMode === "pan"}
         panOnScroll
         selectionKeyCode="Shift"
