@@ -71,7 +71,8 @@ export type MindMapCanvasProps = {
   onNodeDragStop: (event: MouseEvent | TouchEvent, node: MindMapCanvasNode, nodes: MindMapCanvasNode[]) => void;
   onNodeClick: (event: ReactMouseEvent, node: MindMapCanvasNode) => void;
   onEdgeClick?: (event: ReactMouseEvent, edge: MindMapCanvasEdge) => void;
-  onPaneClick: () => void;
+  onPaneClick: (event: ReactMouseEvent) => void;
+  onPaneDoubleClick?: (event: ReactMouseEvent) => void;
   onConnect?: OnConnect;
   onMoveEnd?: OnMoveEnd;
   defaultViewport?: Viewport;
@@ -244,6 +245,7 @@ export function MindMapCanvas({
   onNodeClick,
   onEdgeClick,
   onPaneClick,
+  onPaneDoubleClick,
   onConnect,
   onMoveEnd,
   defaultViewport,
@@ -277,7 +279,10 @@ export function MindMapCanvas({
         onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
-        onPaneClick={onPaneClick}
+        onPaneClick={(event) => {
+          if (event.detail === 2) onPaneDoubleClick?.(event);
+          else onPaneClick(event);
+        }}
         onConnect={onConnect}
         onMoveEnd={onMoveEnd}
         onInit={onInit}
@@ -306,7 +311,7 @@ export function MindMapCanvas({
         <MiniMap pannable zoomable nodeColor="var(--brand)" maskColor="color-mix(in oklch, var(--background) 72%, transparent)" aria-label="思维导图小地图" />
         <div className="pointer-events-none absolute left-4 top-4 z-10 flex items-center gap-2 rounded-lg border border-border bg-card/85 px-3 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur-md">
           <Link2 className="h-3.5 w-3.5" aria-hidden />
-          拖动节点自由摆放 · 双击编辑 · Shift 框选
+          双击空白创建节点 · 双击节点编辑 · Shift 框选
         </div>
       </ReactFlow>
     </div>

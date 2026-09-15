@@ -278,6 +278,9 @@ export default function MindmapUi() {
   const [aiPreview, setAiPreview] = useState<MindElixirData | null>(null);
   const [aiPreviewCount, setAiPreviewCount] = useState(0);
   const aiAbortRef = useRef<AbortController | null>(null);
+  const paneParentRef = useRef<{ id: string | undefined }>({ id: undefined });
+  const paneParentTimerRef = useRef<number | null>(null);
+  const initialFitRef = useRef(false);
 
   const selectedId = selectedIds[selectedIds.length - 1];
   const selectedNode = useMemo(() => flattenNodes(snapshot.nodeData).find(({ node }) => node.id === selectedId)?.node, [selectedId, snapshot.nodeData]);
@@ -346,6 +349,52 @@ export default function MindmapUi() {
     setSelectedEdgeId(null);
     setSelectedIds((current) => multi ? (current.includes(node.id) ? current.filter((id) => id !== node.id) : [...current, node.id]) : [node.id]);
     updateNodeDrafts(node.data.node);
+    setError("");
+  };
+
+  const handlePaneClick = () => {
+    paneParentRef.current = { id: selectedId };
+    if (paneParentTimerRef.current !== null) window.clearTimeout(paneParentTimerRef.current);
+    paneParentTimerRef.current = window.setTimeout(() => {
+      paneParentRef.current = { id: undefined };
+      paneParentTimerRef.current = null;
+    }, 500);
+    setSelectedIds([]);
+    setSelectedEdgeId(null);
+  };
+
+  const handlePaneDoubleClick = (event: ReactMouseEvent) => {
+    const position = flowRef.current?.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    if (!position) {
+      setError("画布尚未准备好，请稍后重试。");
+      return;
+    }
+
+    if (paneParentTimerRef.current !== null) window.clearTimeout(paneParentTimerRef.current);
+    paneParentTimerRef.current = null;
+    const recentParent = paneParentRef.current.id;
+    paneParentRef.current = { id: undefined };
+    const parent = (recentParent ? flattenNodes(snapshot.nodeData).find(({ node }) => node.id === recentParent)?.node : undefined) ?? snapshot.nodeData;
+    const nextNode: NodeObj = { id: newId(), topic: "新节点" };
+    const nextRoot = mapTreeNode(snapshot.nodeData, parent.id, (node) => ({
+      ...node,
+      children: [...(node.children ?? []), nextNode],
+    }));
+    const nextData: MindElixirData = {
+      ...snapshot,
+      nodeData: nextRoot,
+      meta: { ...(snapshot.meta ?? {}), layout: "free" },
+    };
+    const nextGraph = mindElixirDataToGraph(nextData);
+    const inserted = nextGraph.nodes.find((node) => node.id === nextNode.id);
+    if (!inserted) {
+      setError("无法创建画布节点。");
+      return;
+    }
+    inserted.position = { x: position.x, y: position.y };
+    commitGraph(nextGraph, nextData);
+    setSelectedIds([nextNode.id]);
+    setEditingId(nextNode.id);
     setError("");
   };
 
@@ -669,12 +718,18 @@ export default function MindmapUi() {
   };
 
   const fitCanvas = () => { void flowRef.current?.fitView({ padding: 0.24, duration: 240 }); };
-  const handleInit = (instance: ReactFlowInstance<MindMapCanvasNode, MindMapCanvasEdge>) => { flowRef.current = instance; };
   const defaultViewport = useMemo<Viewport | undefined>(() => {
     const viewport = snapshot.meta?.viewport;
     if (!viewport || typeof viewport.x !== "number" || typeof viewport.y !== "number" || typeof viewport.zoom !== "number") return undefined;
     return { x: viewport.x, y: viewport.y, zoom: viewport.zoom };
   }, [snapshot.meta]);
+  const handleInit = (instance: ReactFlowInstance<MindMapCanvasNode, MindMapCanvasEdge>) => {
+    flowRef.current = instance;
+    if (!defaultViewport && !initialFitRef.current) {
+      initialFitRef.current = true;
+      requestAnimationFrame(() => { void instance.fitView({ padding: 0.24, maxZoom: 1.1 }); });
+    }
+  };
   const handleMoveEnd: OnMoveEnd = (_event, viewport) => {
     setSnapshot((current) => ({ ...current, meta: { ...(current.meta ?? {}), viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom } } }));
   };
@@ -721,9 +776,9 @@ export default function MindmapUi() {
 
   return (
     <ToolShell icon={meta.icon} title={meta.name} description="自由摆放节点，保留结构关系；支持 AI、主题、导入导出" local wide>
-      <div className="-mt-4 flex h-[calc(100dvh-8rem)] min-h-[640px] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm">
+      <div className="flex h-[calc(100dvh-13rem)] min-h-[460px] min-w-0 flex-col gap-2.5">
         <input ref={inputRef} type="file" accept=".json,application/json" onChange={importMindmap} className="sr-only" />
-        <header className="flex min-h-12 flex-wrap items-center gap-1.5 border-b border-border bg-card/90 px-3 py-2 backdrop-blur-md">
+        <header className="flex min-h-12 flex-wrap items-center gap-1.5 rounded-xl border border-border bg-card/90 px-3 py-2 shadow-sm backdrop-blur-md">
           <div className="mr-2 flex min-w-0 items-center gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-muted"><GitBranch className="h-4 w-4" /></span><span className="max-w-40 truncate text-sm font-semibold">未命名思维导图</span><span className="hidden text-[11px] text-muted-foreground sm:inline">· 本地处理，不自动保存</span></div>
           <Button variant="ghost" size="sm" onClick={undo} disabled={!history.length} aria-label="撤销"><Undo2 className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={redo} disabled={!future.length} aria-label="重做"><Redo2 className="h-4 w-4" /></Button>
           <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
@@ -731,9 +786,9 @@ export default function MindmapUi() {
           <Button variant="outline" size="sm" onClick={resetMindmap} aria-label="新建导图"><RotateCcw className="h-3.5 w-3.5" />新建</Button><Button variant="primary" size="sm" onClick={openAi} aria-label="打开 AI 思维导图助手"><Sparkles className="h-3.5 w-3.5" />AI 助手</Button><Button variant="ghost" size="sm" onClick={() => setPanel(panel === "outline" ? null : "outline")} aria-label="打开导图大纲"><PanelLeft className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={openInspector} aria-label="打开节点检查器"><PanelRight className="h-4 w-4" /></Button>
           <span className="ml-auto hidden text-[11px] text-muted-foreground lg:inline">{selectedIds.length ? `已选 ${selectedIds.length} 个节点` : "拖动节点自由摆放"}</span>
         </header>
-        {error && <div className="absolute z-50 mx-3 mt-14 max-w-md"><ErrorBox>{error}</ErrorBox></div>}
-        <div className="relative min-h-0 flex-1">
-          <MindMapCanvas graph={graph} selectedIds={selectedIds} editingId={editingId} theme={snapshot.theme} {...callbacks} onNodesChange={handleNodesChange} onEdgesChange={handleEdgesChange} onNodeDragStop={handleNodeDragStop} onNodeClick={handleNodeClick} onEdgeClick={handleEdgeClick} onPaneClick={() => { setSelectedIds([]); setSelectedEdgeId(null); }} onConnect={handleConnect} onMoveEnd={handleMoveEnd} defaultViewport={defaultViewport} onInit={handleInit} />
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          {error && <div className="absolute left-3 top-3 z-50 max-w-md"><ErrorBox>{error}</ErrorBox></div>}
+          <MindMapCanvas graph={graph} selectedIds={selectedIds} editingId={editingId} theme={snapshot.theme} {...callbacks} onNodesChange={handleNodesChange} onEdgesChange={handleEdgesChange} onNodeDragStop={handleNodeDragStop} onNodeClick={handleNodeClick} onEdgeClick={handleEdgeClick} onPaneClick={handlePaneClick} onPaneDoubleClick={handlePaneDoubleClick} onConnect={handleConnect} onMoveEnd={handleMoveEnd} defaultViewport={defaultViewport} onInit={handleInit} />
           <div className="mindmap-floating-toolbar absolute left-3 top-16 z-20 flex flex-col gap-1 rounded-xl border border-border bg-card/90 p-1.5 shadow-xl backdrop-blur-md" aria-label="画布工具">
             <Button variant="ghost" size="sm" title="选择" aria-label="选择工具"><MousePointer2 className="h-4 w-4" /></Button><Button variant="ghost" size="sm" title="平移画布" aria-label="平移工具"><Hand className="h-4 w-4" /></Button><span className="my-0.5 h-px bg-border" /><Button variant="ghost" size="sm" onClick={() => addNode("child")} disabled={!selectedNode} title="添加子节点" aria-label="添加子节点"><Plus className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => addNode("sibling")} disabled={!selectedNode} title="添加同级节点" aria-label="添加同级节点"><GitBranch className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={openInspector} disabled={!selectedNode} title="节点属性" aria-label="节点属性"><Settings2 className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => setPanel(panel === "outline" ? null : "outline")} title="大纲搜索" aria-label="大纲搜索"><Search className="h-4 w-4" /></Button>
           </div>
@@ -742,7 +797,7 @@ export default function MindmapUi() {
           <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1 rounded-lg border border-border bg-card/90 p-1 shadow-lg backdrop-blur-md"><Button variant={layoutMode === "free" ? "primary" : "ghost"} size="sm" onClick={() => setLayoutMode("free")} title="自由摆放" aria-label="自由摆放"><Maximize2 className="h-3.5 w-3.5" /></Button><div className="group relative"><Button variant="ghost" size="sm" title="自动布局" aria-label="自动布局"><Layout className="h-3.5 w-3.5" /><ChevronDown className="h-3 w-3" /></Button><div className="invisible absolute bottom-full left-0 mb-1 w-28 rounded-lg border border-border bg-popover p-1 opacity-0 shadow-xl transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">{directionOptions.map((option) => <button type="button" key={option.value} onClick={() => applyAutoLayout(option.value)} className="block w-full rounded px-2 py-1.5 text-left text-xs hover:bg-muted">{option.label}</button>)}</div></div><Button variant="ghost" size="sm" onClick={fitCanvas} title="适应画布" aria-label="适应画布"><LocateFixed className="h-3.5 w-3.5" /></Button><span className="hidden pl-1 text-[11px] text-muted-foreground sm:inline">{layoutMode === "free" ? "自由摆放" : `自动布局 · ${directionOptions.find((item) => item.value === direction)?.label}`}</span></div>
           {panel === "outline" && outlinePanel}{panel === "inspector" && inspector}{panel === "ai" && aiPanel}
         </div>
-        <footer className="flex min-h-9 items-center justify-between border-t border-border bg-card/70 px-3 text-[11px] text-muted-foreground"><span>拖拽节点到任意位置 · Shift 框选 · 双击或 Enter 编辑</span><span className="hidden items-center gap-2 sm:flex"><button type="button" onClick={() => void flowRef.current?.zoomOut()} aria-label="缩小"><ZoomOut className="h-3.5 w-3.5" /></button><span>画布</span><button type="button" onClick={() => void flowRef.current?.zoomIn()} aria-label="放大"><ZoomIn className="h-3.5 w-3.5" /></button></span></footer>
+        <footer className="flex min-h-9 items-center justify-between rounded-xl border border-border bg-card/70 px-3 text-[11px] text-muted-foreground"><span>拖拽节点到任意位置 · Shift 框选 · 双击或 Enter 编辑</span><span className="hidden items-center gap-2 sm:flex"><button type="button" onClick={() => void flowRef.current?.zoomOut()} aria-label="缩小"><ZoomOut className="h-3.5 w-3.5" /></button><span>画布</span><button type="button" onClick={() => void flowRef.current?.zoomIn()} aria-label="放大"><ZoomIn className="h-3.5 w-3.5" /></button></span></footer>
       </div>
     </ToolShell>
   );
