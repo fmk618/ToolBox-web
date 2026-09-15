@@ -321,7 +321,7 @@ export function MindMapCanvas({
         <MiniMap pannable zoomable nodeColor="var(--brand)" maskColor="color-mix(in oklch, var(--background) 72%, transparent)" aria-label="思维导图小地图" />
         <div className="pointer-events-none absolute left-4 top-4 z-10 flex items-center gap-2 rounded-lg border border-border bg-card/85 px-3 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur-md">
           <Link2 className="h-3.5 w-3.5" aria-hidden />
-          双击空白创建节点 · 双击节点编辑 · Shift 框选
+          双击空白或点击 + 创建节点 · 双击节点编辑 · Shift 框选
         </div>
       </ReactFlow>
     </div>
