@@ -415,7 +415,9 @@ export default function MindmapUi() {
   };
 
   const handleNodesChange = (changes: NodeChange<MindMapCanvasNode>[]) => {
-    const removedIds = changes.filter((change) => change.type === "remove").map((change) => change.id);
+    const graphChanges = changes.filter((change) => change.type !== "dimensions");
+    if (!graphChanges.length) return;
+    const removedIds = graphChanges.filter((change) => change.type === "remove").map((change) => change.id);
     if (removedIds.length) {
       let nextRoot = snapshot.nodeData;
       for (const id of removedIds) {
@@ -438,7 +440,7 @@ export default function MindmapUi() {
     setGraph((current) => {
       const rootId = current.nodes.find((node) => !current.edges.some((edge) => edge.target === node.id))?.id ?? "";
       const flow = graphToCanvas(current, rootId, callbacks, editingId);
-      const changed = applyNodeChanges(changes, flow.nodes);
+      const changed = applyNodeChanges(graphChanges, flow.nodes);
       setSelectedIds(changed.filter((node) => node.selected).map((node) => node.id));
       return graphWithCanvasNodes(current, changed);
     });
