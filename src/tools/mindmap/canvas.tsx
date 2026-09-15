@@ -300,6 +300,7 @@ export function MindMapCanvas({
         elementsSelectable
         selectionOnDrag={false}
         panOnDrag={interactionMode === "pan"}
+        panActivationKeyCode={null}
         panOnScroll
         selectionKeyCode="Shift"
         multiSelectionKeyCode={["Meta", "Control"]}
