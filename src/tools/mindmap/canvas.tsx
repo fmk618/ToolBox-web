@@ -284,8 +284,11 @@ export function MindMapCanvas({
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
         onPaneClick={(event) => {
-          if (event.detail === 2) onPaneDoubleClick?.(event);
-          else onPaneClick(event);
+          if (event.detail === 2) {
+            if (interactionMode === "select") onPaneDoubleClick?.(event);
+            return;
+          }
+          onPaneClick(event);
         }}
         onConnect={onConnect}
         onMoveEnd={onMoveEnd}
@@ -293,6 +296,7 @@ export function MindMapCanvas({
         defaultViewport={defaultViewport}
         fitView={!defaultViewport}
         fitViewOptions={{ padding: 0.24, maxZoom: 1.1 }}
+        zoomOnDoubleClick={false}
         minZoom={0.1}
         maxZoom={3}
         nodesDraggable
@@ -302,7 +306,7 @@ export function MindMapCanvas({
         panOnDrag={interactionMode === "pan"}
         panActivationKeyCode={null}
         panOnScroll
-        selectionKeyCode="Shift"
+        selectionKeyCode={interactionMode === "select" ? "Shift" : null}
         multiSelectionKeyCode={["Meta", "Control"]}
         deleteKeyCode={["Backspace", "Delete"]}
         onlyRenderVisibleElements={false}
