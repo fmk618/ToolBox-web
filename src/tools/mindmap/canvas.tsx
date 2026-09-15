@@ -59,10 +59,13 @@ export type MindMapCanvasEdgeData = {
 
 export type MindMapCanvasEdge = Edge<MindMapCanvasEdgeData>;
 
+export type MindMapInteractionMode = "select" | "pan";
+
 export type MindMapCanvasProps = {
   graph: MindMapGraph;
   selectedIds: string[];
   editingId: string | null;
+  interactionMode: MindMapInteractionMode;
   onBeginEdit: (id: string) => void;
   onCommitEdit: (id: string, value: string) => void;
   onCancelEdit: () => void;
@@ -71,7 +74,8 @@ export type MindMapCanvasProps = {
   onNodeDragStop: (event: MouseEvent | TouchEvent, node: MindMapCanvasNode, nodes: MindMapCanvasNode[]) => void;
   onNodeClick: (event: ReactMouseEvent, node: MindMapCanvasNode) => void;
   onEdgeClick?: (event: ReactMouseEvent, edge: MindMapCanvasEdge) => void;
-  onPaneClick: () => void;
+  onPaneClick: (event: ReactMouseEvent) => void;
+  onPaneDoubleClick?: (event: ReactMouseEvent) => void;
   onConnect?: OnConnect;
   onMoveEnd?: OnMoveEnd;
   defaultViewport?: Viewport;
@@ -235,6 +239,7 @@ export function MindMapCanvas({
   graph,
   selectedIds,
   editingId,
+  interactionMode,
   onBeginEdit,
   onCommitEdit,
   onCancelEdit,
@@ -244,6 +249,7 @@ export function MindMapCanvas({
   onNodeClick,
   onEdgeClick,
   onPaneClick,
+  onPaneDoubleClick,
   onConnect,
   onMoveEnd,
   defaultViewport,
@@ -258,7 +264,7 @@ export function MindMapCanvas({
 
   return (
     <div
-      className={`mindmap-flow relative h-full w-full ${className ?? ""}`}
+      className={`mindmap-flow mindmap-flow-${interactionMode} relative h-full w-full ${className ?? ""}`}
       style={{
         "--mindmap-node-bg": theme?.cssVar?.["--bgcolor"],
         "--mindmap-node-color": theme?.cssVar?.["--color"],
@@ -277,22 +283,30 @@ export function MindMapCanvas({
         onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
-        onPaneClick={onPaneClick}
+        onPaneClick={(event) => {
+          if (event.detail === 2) {
+            if (interactionMode === "select") onPaneDoubleClick?.(event);
+            return;
+          }
+          onPaneClick(event);
+        }}
         onConnect={onConnect}
         onMoveEnd={onMoveEnd}
         onInit={onInit}
         defaultViewport={defaultViewport}
         fitView={!defaultViewport}
         fitViewOptions={{ padding: 0.24, maxZoom: 1.1 }}
+        zoomOnDoubleClick={false}
         minZoom={0.1}
         maxZoom={3}
         nodesDraggable
         nodesConnectable
         elementsSelectable
-        selectionOnDrag
-        panOnDrag
+        selectionOnDrag={false}
+        panOnDrag={interactionMode === "pan"}
+        panActivationKeyCode={null}
         panOnScroll
-        selectionKeyCode="Shift"
+        selectionKeyCode={interactionMode === "select" ? "Shift" : null}
         multiSelectionKeyCode={["Meta", "Control"]}
         deleteKeyCode={["Backspace", "Delete"]}
         onlyRenderVisibleElements={false}
@@ -306,7 +320,7 @@ export function MindMapCanvas({
         <MiniMap pannable zoomable nodeColor="var(--brand)" maskColor="color-mix(in oklch, var(--background) 72%, transparent)" aria-label="思维导图小地图" />
         <div className="pointer-events-none absolute left-4 top-4 z-10 flex items-center gap-2 rounded-lg border border-border bg-card/85 px-3 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur-md">
           <Link2 className="h-3.5 w-3.5" aria-hidden />
-          拖动节点自由摆放 · 双击编辑 · Shift 框选
+          双击空白创建节点 · 双击节点编辑 · Shift 框选
         </div>
       </ReactFlow>
     </div>
