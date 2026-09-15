@@ -59,10 +59,13 @@ export type MindMapCanvasEdgeData = {
 
 export type MindMapCanvasEdge = Edge<MindMapCanvasEdgeData>;
 
+export type MindMapInteractionMode = "select" | "pan";
+
 export type MindMapCanvasProps = {
   graph: MindMapGraph;
   selectedIds: string[];
   editingId: string | null;
+  interactionMode: MindMapInteractionMode;
   onBeginEdit: (id: string) => void;
   onCommitEdit: (id: string, value: string) => void;
   onCancelEdit: () => void;
@@ -236,6 +239,7 @@ export function MindMapCanvas({
   graph,
   selectedIds,
   editingId,
+  interactionMode,
   onBeginEdit,
   onCommitEdit,
   onCancelEdit,
@@ -260,7 +264,7 @@ export function MindMapCanvas({
 
   return (
     <div
-      className={`mindmap-flow relative h-full w-full ${className ?? ""}`}
+      className={`mindmap-flow mindmap-flow-${interactionMode} relative h-full w-full ${className ?? ""}`}
       style={{
         "--mindmap-node-bg": theme?.cssVar?.["--bgcolor"],
         "--mindmap-node-color": theme?.cssVar?.["--color"],
@@ -295,7 +299,7 @@ export function MindMapCanvas({
         nodesConnectable
         elementsSelectable
         selectionOnDrag
-        panOnDrag
+        panOnDrag={interactionMode === "pan"}
         panOnScroll
         selectionKeyCode="Shift"
         multiSelectionKeyCode={["Meta", "Control"]}

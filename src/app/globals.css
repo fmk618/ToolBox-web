@@ -249,11 +249,20 @@ body {
 }
 
 .react-flow__pane {
+  cursor: default;
+}
+
+.mindmap-flow-pan .react-flow__pane,
+.mindmap-flow-pan .react-flow__pane.draggable {
   cursor: grab;
 }
 
-.react-flow__pane:active {
+.mindmap-flow-pan .react-flow__pane.dragging {
   cursor: grabbing;
+}
+
+.mindmap-flow-select .react-flow__pane.selection {
+  cursor: crosshair;
 }
 
 .react-flow__edge-path {
